@@ -9,13 +9,15 @@ import json
 #entityMention = URIRef("http://persistence.uni-leipzig.org/nlp2rdf/ontologies/nif-core#anchorOf")
 mimetype='application/x-turtle'
 
-w=open('flask.log', 'a')
-
 def normalizeWeights(fw):
 	total=sum(fw.values())
 	for k in fw:
 		fw[k]/=total
 	return fw
+
+
+month='200712'
+timePickle=pickle.load(open(month + '_agg.p', 'rb'))
 
 @app.route("/", methods = ['POST'])
 def run():
@@ -23,7 +25,7 @@ def run():
 	num+=1
 	g=Graph()
 	inputRDF=request.stream.read()
-	w.write(str(inputRDF) + '\n')
+	#w.write(str(inputRDF) + '\n')
 	g.parse(data=inputRDF, format="n3")
 
 	#### DEFAULTS ####
@@ -34,7 +36,6 @@ def run():
 	lcoref=True
 	order=True
 	tp=True
-	month='200712'
 	N=10
 	#### end DEFAULTS ####
 
@@ -56,7 +57,7 @@ def run():
 		month=args.get('month')
 	for k in factorWeights.keys(): # Check if any weight is explicitly modified
 		if args.get(k):
-			factorWeights[k]=args.get(k)
+			factorWeights[k]=float(args.get(k))
 	factorWeights=normalizeWeights(factorWeights)
 	for limit in ['l1', 'l2']:
 		if args.get(limit):
@@ -67,23 +68,26 @@ def run():
 
 	print("Request %d came! %d iterations, Memory: %r, Local coreference: %r, Order: %r, Time popularity: %r, scoring weights: %s, limits: %s, N: %d" % (num, iterations, memory>0, lcoref, order, tp, json.dumps(factorWeights), json.dumps(limits), N))
 	#print("Normalized weights: " + factorWeights)
-	if tp:
-		timePickle=pickle.load(open(month + '_agg.p', 'rb'))
-	else:
+	global timePickle
+	if not tp:
 		timePickle={}
 	global lastN
 	if memory==0:
 		lastN=[]
 	g,lastN=nif_system.run(g, factorWeights, timePickle, iterations, lcoref, order, lastN, limits, N)
 
-	outputRDF=g.serialize(format='turtle')
-	#w.write(str(outputRDF) + '\n')
+	if args.get('debug'):
+		g.serialize(destination='res' + str(num) + '.rdf', format='turtle')
+
+	#w=open('res' + str(num) + '.rdf', 'w')
+	#w.write(outputRDF)
 	
+	outputRDF=g.serialize(format='turtle')
 	return Response(outputRDF, mimetype=mimetype)
 
 if __name__ == "__main__":
 	global num
-	num=0
+	num=-1
 	global lastN
 	lastN=[]
 	app.run()
