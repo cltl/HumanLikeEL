@@ -2,10 +2,13 @@ import requests
 import urllib.parse
 import urllib.request
 from multiprocessing.dummy import Pool as ThreadPool 
+import redis
 
 sparql_endpoint="http://sparql.fii800.lod.labs.vu.nl/sparql"
 #sparql_endpoint="http://dbpedia.org/sparql"
-threads=16
+threads=32
+
+rds=redis.Redis()
 
 def yieldMentions(em):
     for entity in em:
@@ -36,21 +39,16 @@ def get_dbpedia_results(query):
 		return []
 
 def getLinkRedirect(link):
-        query='select ?b where { <' + link + '> <http://dbpedia.org/ontology/wikiPageRedirects> ?b } LIMIT 1'
-        results=get_dbpedia_results(query)
-        if len(results):
-                for result in results:
-                        return result["b"]["value"]
-        else:
-                return link
+	red=rds.get('rdr:%s' % link)
+	if red:
+		return red.decode('UTF-8')
+	else:
+		return link
 
 def generateCandidatesWithLOTUS(mention, minSize=20, maxSize=50):
-	global threads
 	normalized=normalizeURL(mention)
-	iterableCands=getCandidatesForLemma(mention, minSize, maxSize)
-	pool = ThreadPool(1)
-	cleanCands=pool.map(getLinkRedirect, iterableCands)
-	return tuple([mention, cleanCands])
+	cands=getCandidatesForLemma(mention, minSize, maxSize)
+	return tuple([mention, cands])
 
 def getCandidatesForLemma(lemma, min_size, max_size):
 	hits=[]
@@ -67,4 +65,5 @@ def getCandidatesForLemma(lemma, min_size, max_size):
 	subjects=set()
 	for hit in hits:
 		if "Disambiguation" not in hit["subject"].lower() and "Category" not in hit["subject"]:
-			yield hit["subject"]
+			subjects.add(getLinkRedirect(normalizeURL(hit["subject"])))
+	return subjects

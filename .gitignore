@@ -2,3 +2,4 @@
 *.rdf
 .ipynb_checkpoints/
 __pycache__/
+data/
