@@ -1,3 +1,4 @@
+import json
 import re
 import sys
 import urllib.parse
@@ -11,7 +12,13 @@ import pickle
 import py2neo
 from rdflib import Graph, URIRef, Literal
 
+sparql_endpoint = "http://http://sparql.fii800.lod.labs.vu.nl/sparql"
+
 identityRelation = URIRef("http://www.w3.org/2005/11/its/rdf#taIdentRef")
+confidenceRelation = URIRef("http://www.w3.org/2005/11/its/rdf#taConfidence")
+confidenceRelation2 = URIRef("http://persistence.uni-leipzig.org/nlp2rdf/ontologies/nif-core#confidence")
+candidateRelation = URIRef("http://ilievski.nl/candidate")
+candidateScoresRelation = URIRef("http://ilievski.nl/candidatescores")
 rds=redis.Redis(socket_timeout=5)
 def getPreviousOccurrence(c, entities, eid):
 	while eid>0:
@@ -42,19 +49,21 @@ def reread(resolvedMentions, entities, start, allCandidates, allMentions, weight
 
 			#print("############################################## Resolving " + mention)
 			maxCount=getMaxCount(allCandidates[str(start)])
-			myLink, score=disambiguateEntity(candidates, weights, entities, factorWeights, maxCount, start, limit, lastN)
+			myLink, score, cnd=disambiguateEntity(candidates, weights, entities, factorWeights, maxCount, start, limit, lastN)
 		else:
 			myLink=special
 			score=1.0
 		#print()
 		#print("########################### BEST: %s. Score: %f" % (myLink, score))
 		#print()
+
+		allCandidates[str(start)]=cnd
 		entities[str(start)]=myLink
 		scores[str(start)]=score
 		lastN.append(myLink)
 		lastN=lastN[N*(-1):]
 		start+=1
-	return entities, scores, lastN
+	return entities, scores, lastN, allCandidates
 
 def normalizeTPs(cands):
 	m=1
@@ -75,6 +84,7 @@ def disambiguateEntity(candidates, weights,resolvedEntities, factorWeights, maxC
 		if currentId in resolvedEntities:
 			del resolvedEntities[str(currentId)]
 		candidates=normalizeTPs(candidates)
+		newCandidates=[]
 		for cand in candidates:
 			candidate=cand[0]
 			ss=cand[1]["ss"]
@@ -92,9 +102,11 @@ def disambiguateEntity(candidates, weights,resolvedEntities, factorWeights, maxC
 			if score>limit and (score>max_score or (score==max_score and len(candidate)<len(best_candidate))) and not isDisambiguation(candidate):
 				max_score=score
 				best_candidate=candidate
-		return utils.normalizeURL(best_candidate), max_score
+			debugCand=tuple([candidate, [ss, coherence, associativeness, recency, temporalPopularity, score]])
+			newCandidates.append(debugCand)
+		return utils.normalizeURL(best_candidate), max_score, newCandidates
 	else:
-		return "--NME--", 1.0
+		return "--NME--", 1.0, [] 
 
 def isDisambiguation(c):
         query='select ?b where { <' + c + '> <http://dbpedia.org/ontology/wikiPageDisambiguates> ?b } LIMIT 1'
@@ -108,8 +120,9 @@ def existingURI(c):
 
 def get_dbpedia_results(query):
 	q = {'query': query, 'format': 'json'}
-	s='http://dbpedia.org/sparql'
-	url = s + '?' + urllib.parse.urlencode(q)
+#	s='http://dbpedia.org/sparql'
+	global sparql_endpoint
+	url = sparql_endpoint + '?' + urllib.parse.urlencode(q)
 	r = requests.get(url=url)
 	try:
         	page = r.json()
@@ -269,13 +282,13 @@ def getMaxCount(cands):
 
 def generateCandidatesWithLOTUS(mention, minSize=10, maxSize=100):
 	normalized=utils.normalizeURL(mention)
-	fromCache=rds.get("lotus:%s" % normalized)
+	fromCache=rds.get("lotus001:%s" % normalized)
 	if fromCache:
 		cands=pickle.loads(fromCache)
 	else:
 		cands=getCandidatesForLemma(mention, minSize, maxSize)
 		cands=cleanRedirects(cands)
-		rds.set("lotus:" + normalized, pickle.dumps(cands))
+		rds.set("lotus001:" + normalized, pickle.dumps(cands))
 	sortedCands=sorted(cands.items(), key=lambda x:x[1]["count"], reverse=True)
 	#try:
 	maxCount=getMaxCount(cands.items())
@@ -357,6 +370,8 @@ def run(g, factorWeights={'wss':0.5,'wc':0.4, 'wa':0.05, 'wr': 0.05, 'wt': 0.0},
 	limitFirstTime=limits['l1']
 	limitReread=limits['l2']
 	qres=utils.getNIFEntities(g, order)
+	if len(qres)==0:
+		return g, lastN
 	global chains
 	chains=utils.getCorefChains(g)
 	global offsetsToIds
@@ -382,7 +397,7 @@ def run(g, factorWeights={'wss':0.5,'wc':0.4, 'wa':0.05, 'wr': 0.05, 'wt': 0.0},
 		if not special:
 			candidates=appendViews(candidates, timePickle)
 			#print("############################################## Resolving " + mention)
-			myLink, score=disambiguateEntity(candidates, weights, resolvedEntities, factorWeights, maxCount, int(nextId), limitFirstTime, lastN)
+			myLink, score, cndt=disambiguateEntity(candidates, weights, resolvedEntities, factorWeights, maxCount, int(nextId), limitFirstTime, lastN)
 		else:
 			myLink=special
 			score=1.0
@@ -398,15 +413,21 @@ def run(g, factorWeights={'wss':0.5,'wc':0.4, 'wa':0.05, 'wr': 0.05, 'wt': 0.0},
 		iterations-=1
 		start=1
 		if iterations>0:
-			resolvedEntities, scores, lastN=reread(resolvedMentions,resolvedEntities,start, allCandidates, allMentions, weights, factorWeights, timePickle, limitReread, lastN, N, lcoref)
+			resolvedEntities, scores, lastN, myCandidates=reread(resolvedMentions,resolvedEntities,start, allCandidates, allMentions, weights, factorWeights, timePickle, limitReread, lastN, N, lcoref)
 		else:
 			while start<=len(resolvedEntities):
 				link=resolvedEntities[str(start)]
+				score=scores[str(start)]
 				if link=='--NME--':
 					#g.add( (originalIds[str(start)], identityRelation, Literal("null")) )
 					link=utils.makeVU(allMentions[str(start)])
 				else:
 					link=utils.makeDbpedia(link)
 				g.add( (originalIds[str(start)], identityRelation, URIRef(link)) )
+				g.add( (originalIds[str(start)], confidenceRelation, Literal(float(score))))
+				g.add( (originalIds[str(start)], confidenceRelation2, Literal(float(score))))
+				for cd in myCandidates[str(start)]:
+					g.add( (originalIds[str(start)], candidateRelation, URIRef(cd[0])) )
+					g.add ( (originalIds[str(start)], candidateScoresRelation, Literal(json.dumps({cd[0]: cd[1]}))))
 				start+=1
 	return g, lastN
