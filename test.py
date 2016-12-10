@@ -5,12 +5,18 @@ import time
 #test_file="wes2015-dataset-nif.rdf"
 path="data/"
 test_file="AIDA-YAGO2-dataset_topicsLowlevel.tsv"
+#test_file='wes2015-dataset-nif-1.2.rdf'
+
 articles=conversion.load_article_from_conll_file(path + test_file)
+
+#collection='aidatrain'
+collection='aidatesta'
+#collection='wes2015'
 
 #print(utils.analyzeEntities(articles, 'aidatestb'))
 
-#collection='aidatrain'
-collection='aidatestb'
+print("data file loaded!")
+
 nonNils=0
 found=0
 correct=0

@@ -13,17 +13,18 @@ def load_article_from_nif_file(nif_file):
 	news_items=set()
 
 	articles = g.query(
-	""" SELECT ?date ?string
+	""" SELECT ?articleid ?date ?string
 	WHERE {
 		?articleid nif:isString ?string .
 		OPTIONAL { ?articleid dc:date ?date . }
-	} LIMIT 1
+	}
 	""")
 	for article in articles:
 		news_item_obj=classes.NewsItem(
 			content=article['string'],
 			identifier=article['articleid'], #"http://yovisto.com/resource/dataset/iswc2015/doc/281#char=0,4239",
-			dct=article['date']
+			dct=article['date'],
+			collection='wes2015'
 		)
 		query=""" SELECT ?id ?mention ?start ?end ?gold
 		WHERE {

@@ -26,7 +26,7 @@ def parallelizeCandidateGeneration(entity_mentions):
 
 def normalizeURL(s):
 	if s:
-		return s.replace("http://en.wikipedia.org/wiki/", "").replace("http://dbpedia.org/resource/", ""). replace("http://dbpedia.org/page/", "").strip()
+		return urllib.parse.unquote(s.replace("http://en.wikipedia.org/wiki/", "").replace("http://dbpedia.org/resource/", ""). replace("http://dbpedia.org/page/", "").strip())
 	else:
 		return '--NME--'
 
