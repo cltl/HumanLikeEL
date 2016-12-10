@@ -1,15 +1,39 @@
 import conversion
 import utils
+import time
 
 #test_file="wes2015-dataset-nif.rdf"
 path="data/"
 test_file="AIDA-YAGO2-dataset_topicsLowlevel.tsv"
 articles=conversion.load_article_from_conll_file(path + test_file)
 
-c=0
+#print(utils.analyzeEntities(articles, 'aidatestb'))
+
+#collection='aidatrain'
+collection='aidatestb'
+nonNils=0
+found=0
+correct=0
+t1=time.time()
 for article in articles:
-	c+=len(article.entity_mentions)
-print(c)
+	if article.collection!=collection:
+		continue
+	print(article.identifier)
+	allCands=utils.parallelizeCandidateGeneration(article.entity_mentions)
+	for m in article.entity_mentions:
+		cands=allCands[m.mention]
+		m.candidates=cands
+		if m.gold_link!='--NME--':
+			if m.gold_link in m.candidates:  #, m.gold_link, m.candidates)
+				found+=1
+			system_link=utils.getMostPopularCandidate(m.candidates)
+			if system_link==m.gold_link:
+				correct+=1
+			nonNils+=1
+print("Found in candidates", found, "Correct", correct, "All non-Nils", nonNils, "%found in candidates", found/nonNils, "%correct", correct/nonNils)
+t2=time.time()
+print("Took %f seconds" % (t2-t1))
+
 """
 example_article=articles.pop()
 

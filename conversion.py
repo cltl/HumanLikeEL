@@ -58,10 +58,16 @@ def load_article_from_conll_file(conll_file):
 				news_items.add(news_item_obj)
 			# change current file
 			current_file, current_topic=line.lstrip('-DOCSTART-').strip().split('\t')
-
+			if 'testa' in current_file:
+				collection='aidatesta'
+			elif 'testb' in current_file:
+				collection='aidatestb'
+			else:
+				collection='aidatrain'
 			news_item_obj = classes.NewsItem(
 				identifier=current_file,
-				domain=current_topic
+				domain=current_topic,
+				collection=collection
 			)
 		else:
 			elements=line.split('\t')
@@ -69,7 +75,6 @@ def load_article_from_conll_file(conll_file):
 			if len(elements)>3 and elements[1]=='B':
 				mention=elements[2]
 				gold=elements[3]
-				print(current_file, mention)
 				entity_obj = classes.EntityMention(
                          		begin_index=current_offset,
                                 	end_index=current_offset + len(mention),
