@@ -44,7 +44,7 @@ def load_article_from_nif_file(nif_file):
 				mention=str(entity['mention']),
 				gold_link=utils.getLinkRedirect(utils.normalizeURL(str(entity['gold'])))
 			)
-			news_item_obj.entity_mentions.add(entity_obj)
+			news_item_obj.entity_mentions.append(entity_obj)
 		news_items.add(news_item_obj)
 	return news_items
 
@@ -84,7 +84,7 @@ def load_article_from_conll_file(conll_file):
                                 	mention=mention,
                                 	gold_link=gold
                         	)
-				news_item_obj.entity_mentions.add(entity_obj)
+				news_item_obj.entity_mentions.append(entity_obj)
 			current_offset+=len(word)+1
 	news_items.add(news_item_obj)
 	return news_items
@@ -104,15 +104,14 @@ def load_article_from_xml_files(location, collection='msnbc'):
 			offset=int(entity_mention.find('Offset').text.strip())
 			length=int(entity_mention.find('Length').text.strip())
 			gold_link=utils.getLinkRedirect(utils.normalizeURL(entity_mention.find('ChosenAnnotation').text.strip()))
-			print(mention)
 			entity_obj = classes.EntityMention(
 				begin_index=offset,
 				end_index=offset + length,
 				mention=mention,
 				gold_link=gold_link
 			)		
-			news_item_obj.entity_mentions.add(entity_obj)
+			news_item_obj.entity_mentions.append(entity_obj)
 		news_items.add(news_item_obj)
 	return news_items
 
-load_article_from_xml_files('data/WikificationACL2011Data/MSNBC/Problems/*')
+#load_article_from_xml_files('data/WikificationACL2011Data/MSNBC/Problems/*')

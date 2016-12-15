@@ -84,6 +84,31 @@ def getCandidatesForLemma(lemma, min_size, max_size):
 				subjects.add(redirected)
 	return subjects
 
+def getInitials(entity_string):
+        initials=""
+        ent_split=entity_string.split()
+        if len(ent_split)>1:
+                for word in ent_split:
+                        if word[0].isupper():
+                                initials+=word[0]
+        else:
+                initials=None
+        return initials
+
+def isAbbreviation(m1, m2):
+	if m1==m2:
+		return False
+	m1=m1.replace('.', '').replace(' ', '')
+	if not m2 or not getInitials(m2):
+		return False
+	if m1[0]!=m2[0]:
+		return False
+	else:
+		return m1==getInitials(m2)
+	
+def isSubstring(m1, m2):
+	return m1 in m2 and m1!=m2
+
 def analyzeEntities(articles, collection):
         c=0
         nils=0

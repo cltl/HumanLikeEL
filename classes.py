@@ -28,7 +28,7 @@ class NewsItem:
         self.publisher = publisher    # e.g. "Reuters" -> Who is the publisher of the document (e.g. Reuters)
         self.domain = domain          # e.g. "crime"  -> one of the topics/domains (we could also use URI identifiers for these if we want to keep more information)
         self.content = content	      # the text of the news article
-        self.entity_mentions = set()  # set of instances of EntityMention class
+        self.entity_mentions = []  # set of instances of EntityMention class
 
 
 class Publisher:
