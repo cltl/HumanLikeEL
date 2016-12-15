@@ -41,6 +41,13 @@ def get_dbpedia_results(query):
 	except ValueError:
 		return []
 
+def getLinkDisambiguations(link):
+	red=rds.get('dis:%s' % link)
+	if red:
+		return set(eval(red.decode('UTF-8')))
+	else:
+		return None
+
 def getLinkRedirect(link):
 	red=rds.get('rdr:%s' % link)
 	if red:
@@ -67,23 +74,15 @@ def getCandidatesForLemma(lemma, min_size, max_size):
 
 	subjects=set()
 	for hit in hits:
-		if "Disambiguation" not in hit["subject"].lower() and "Category" not in hit["subject"]:
-			subjects.add(getLinkRedirect(normalizeURL(hit["subject"])))
+		if "Category" not in hit["subject"]:
+			redirected=getLinkRedirect(normalizeURL(hit["subject"]))
+	
+			subject=getLinkDisambiguations(redirected)
+			if subject:
+				subjects |= subject
+			else:
+				subjects.add(redirected)
 	return subjects
-
-def getMostPopularCandidate(candidates):
-	bestScore=0.0
-	bestCandidate=None
-	for candidate in candidates:
-		try:
-			score=float(rds.get('pr:%s' % candidate))
-			if score>bestScore:
-				bestScore=score
-				bestCandidate=candidate
-		except:
-			print('ERROR: No pr for %s' % candidate)
-
-	return bestCandidate
 
 def analyzeEntities(articles, collection):
         c=0

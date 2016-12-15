@@ -5,6 +5,8 @@
 import classes
 from rdflib import Graph, URIRef
 import utils
+from lxml import etree
+import glob
 
 def load_article_from_nif_file(nif_file):
 	g=Graph()
@@ -40,7 +42,7 @@ def load_article_from_nif_file(nif_file):
 				begin_index=int(entity['start']),
 				end_index=int(entity['end']),
 				mention=str(entity['mention']),
-				gold_link=utils.getLinkRedirect(str(entity['gold']))
+				gold_link=utils.getLinkRedirect(utils.normalizeURL(str(entity['gold'])))
 			)
 			news_item_obj.entity_mentions.add(entity_obj)
 		news_items.add(news_item_obj)
@@ -86,3 +88,31 @@ def load_article_from_conll_file(conll_file):
 			current_offset+=len(word)+1
 	news_items.add(news_item_obj)
 	return news_items
+
+def load_article_from_xml_files(location, collection='msnbc'):
+	news_items=set()
+	for filename in glob.glob(location):
+		print(filename)
+		parser = etree.XMLParser(recover=True, encoding='latin1')
+		xml = etree.parse(filename, parser)
+		news_item_obj = classes.NewsItem(
+			identifier=filename,
+			collection=collection
+		)
+		for entity_mention in xml.iterfind('/ReferenceInstance'):
+			mention=entity_mention.find('SurfaceForm').text.strip()
+			offset=int(entity_mention.find('Offset').text.strip())
+			length=int(entity_mention.find('Length').text.strip())
+			gold_link=utils.getLinkRedirect(utils.normalizeURL(entity_mention.find('ChosenAnnotation').text.strip()))
+			print(mention)
+			entity_obj = classes.EntityMention(
+				begin_index=offset,
+				end_index=offset + length,
+				mention=mention,
+				gold_link=gold_link
+			)		
+			news_item_obj.entity_mentions.add(entity_obj)
+		news_items.add(news_item_obj)
+	return news_items
+
+load_article_from_xml_files('data/WikificationACL2011Data/MSNBC/Problems/*')

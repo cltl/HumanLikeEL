@@ -1,17 +1,23 @@
 import conversion
 import utils
 import time
+import ranking
 
-#test_file="wes2015-dataset-nif.rdf"
 path="data/"
-test_file="AIDA-YAGO2-dataset_topicsLowlevel.tsv"
+#test_file="AIDA-YAGO2-dataset_topicsLowlevel.tsv"
 #test_file='wes2015-dataset-nif-1.2.rdf'
+#test_file='WikificationACL2011Data/MSNBC/Problems/*'
+test_file='WikificationACL2011Data/ACE2004_Coref_Turking/Dev/ProblemsNoTranscripts/*'
 
-articles=conversion.load_article_from_conll_file(path + test_file)
+#articles=conversion.load_article_from_conll_file(path + test_file)
+#articles=conversion.load_article_from_nif_file(path + test_file)
+articles=conversion.load_article_from_xml_files(path + test_file, 'ace2004')
 
 #collection='aidatrain'
-collection='aidatesta'
+#collection='aidatestb'
 #collection='wes2015'
+#collection='msnbc'
+collection='ace2004'
 
 #print(utils.analyzeEntities(articles, 'aidatestb'))
 
@@ -29,10 +35,11 @@ for article in articles:
 	for m in article.entity_mentions:
 		cands=allCands[m.mention]
 		m.candidates=cands
+		print(m.mention, cands, m.gold_link)
 		if m.gold_link!='--NME--':
 			if m.gold_link in m.candidates:  #, m.gold_link, m.candidates)
 				found+=1
-			system_link=utils.getMostPopularCandidate(m.candidates)
+			system_link=ranking.getMostPopularCandidate(m.candidates)
 			if system_link==m.gold_link:
 				correct+=1
 			nonNils+=1
