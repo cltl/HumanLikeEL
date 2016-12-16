@@ -17,7 +17,7 @@ def yieldMentions(em):
     for entity in em:
         yield entity.mention
 
-def parallelizeCandidateGeneration(entity_mentions):
+def parallelizeCandidateGeneration(entity_mentions, ranker='psf'):
 	global threads
 	pool = ThreadPool(threads) 
 	iterableMentions = yieldMentions(entity_mentions)
@@ -26,7 +26,7 @@ def parallelizeCandidateGeneration(entity_mentions):
 
 def normalizeURL(s):
 	if s:
-		return urllib.parse.unquote(s.replace("http://en.wikipedia.org/wiki/", "").replace("http://dbpedia.org/resource/", ""). replace("http://dbpedia.org/page/", "").strip())
+		return urllib.parse.unquote(s.replace("http://en.wikipedia.org/wiki/", "").replace("http://dbpedia.org/resource/", ""). replace("http://dbpedia.org/page/", "").strip().strip('"'))
 	else:
 		return '--NME--'
 
@@ -55,15 +55,17 @@ def getLinkRedirect(link):
 	else:
 		return link
 
-def generateCandidatesWithLOTUS(mention, minSize=20, maxSize=50):
+def generateCandidatesWithLOTUS(mention, minSize=20, maxSize=200):
 	normalized=normalizeURL(mention)
 	cands=getCandidatesForLemma(mention, minSize, maxSize)
 	return (mention, cands)
 
 def getCandidatesForLemma(lemma, min_size, max_size):
 	hits=[]
+	#rank='lengthnorm'
+	rank='psf'
 	for match in ["phrase", "conjunct"]:
-		url="http://lotus.lodlaundromat.org/retrieve?size=" + str(max_size) + "&match=" + match + "&rank=psf&noblank=true&" + urllib.parse.urlencode({"string": lemma, "predicate": "label", "subject": "\"http://dbpedia.org/resource\""})
+		url="http://lotus.lodlaundromat.org/retrieve?size=" + str(max_size) + "&match=" + match + "&rank=" + rank + "&noblank=true&" + urllib.parse.urlencode({"string": lemma, "predicate": "label", "subject": "\"http://dbpedia.org/resource\""})
 		r = requests.get(url=url)
 		content = r.json()
 

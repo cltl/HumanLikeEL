@@ -1,42 +1,58 @@
+#!/usr/bin/env python
+
 import dataparser
 import systemparser
 import utils
-import time
 import ranking
 
+import sys
+import time
+
 path="data/"
-#test_file="AIDA-YAGO2-dataset_topicsLowlevel.tsv"
-test_file='wes2015-dataset-nif-1.2.rdf'
-#test_file='WikificationACL2011Data/MSNBC/Problems/*'
-#test_file='WikificationACL2011Data/ACE2004_Coref_Turking/Dev/ProblemsNoTranscripts/*'
 
-#articles=dataparser.load_article_from_conll_file(path + test_file)
-articles=dataparser.load_article_from_nif_file(path + test_file)
-#articles=dataparser.load_article_from_xml_files(path + test_file)
-#articles=dataparser.load_article_from_xml_files(path + test_file, 'ace2004')
+if len(sys.argv)>=3:
+	collection=sys.argv[1]
+	system=sys.argv[2]
+else:
+	sys.exit(-1)
 
-#collection='aidatesta'
-#collection='aidatestb'
-collection='wes2015'
-#collection='msnbc'
-#collection='ace2004'
+if collection in ['aidatesta', 'aidatestb']:
+	test_file="AIDA-YAGO2-dataset_topicsLowlevel.tsv"
+	articles=dataparser.load_article_from_conll_file(path + test_file)
+elif collection=='wes2015':
+	test_file='wes2015-dataset-nif-1.2.rdf'
+	articles=dataparser.load_article_from_nif_file(path + test_file)
+else:
+	if collection=='msnbc':
+		test_file='WikificationACL2011Data/MSNBC/Problems/*'
+	elif collection=='ace2004':
+		test_file='WikificationACL2011Data/ACE2004_Coref_Turking/Dev/ProblemsNoTranscripts/*'
+	else:		
+		sys.exit(-1)
+	articles=dataparser.load_article_from_xml_files(path + test_file, collection)
 
-system='spotlight'
+print()
+print(collection, system)
 
-print("data file loaded!")
+
+NILS=['--NME--', '*null*']
+
+# for precision@k
+maxK=5
 
 nonNils=0
+nils=0
 found=0
-correct=0
+correct={'1': 0, '2': 0, '3': 0, '4': 0, '5': 0}
 t1=time.time()
-current=0
+toWrite=""
 for article in articles:
 	if article.collection!=collection:
 		continue
-	print(article.identifier)
-	allCands=utils.parallelizeCandidateGeneration(article.entity_mentions)
+	if system!='spotlight':
+		allCands=utils.parallelizeCandidateGeneration(article.entity_mentions)
+	current=0
 	for m in article.entity_mentions:
-
 		if system=='spotlight':
 			cands=systemparser.getSpotlightCandidates(m.mention)
 		else:
@@ -44,24 +60,37 @@ for article in articles:
 
 			# Try to generate extra local candidates
 			if current>0:
-				print("Checking entity %d" % current)
 				for m2 in article.entity_mentions[:current-1]:
 					if utils.isSubstring(m.mention, m2.mention) or utils.isAbbreviation(m.mention, m2.mention):
-						print("%s is a substring of %s" % (m.mention, m2.mention))
 						if m2.candidates:
 							cands |= m2.candidates
 			# End of local candidates generation
 		m.candidates=cands
-		if m.gold_link!='--NME--':
+		if m.gold_link not in NILS:# NILS=['--NME--', '*null*']
 			if m.gold_link in m.candidates:  #, m.gold_link, m.candidates)
 				found+=1
-			system_link=ranking.getMostPopularCandidate(m.candidates)
-			if system_link==m.gold_link:
-				correct+=1
+				orderedLinks=ranking.getMostPopularCandidates(m.candidates)
+				try:
+					golden_rank=orderedLinks.index(m.gold_link)+1
+					for k in correct:
+						if golden_rank<=int(k):
+							correct[k]+=1
+				except:
+					print("The gold link %s had no entry in the pagerank data" % m.gold_link)
+			else:
+				toWrite+="%s\t%s\t%s\n" % (m.mention, m.gold_link, m.candidates)
 			nonNils+=1
+		else:
+			nils+=1
 		current+=1
 
-print("Found in candidates", found, "Correct", correct, "All non-Nils", nonNils, "%found in candidates", found/nonNils, "%correct", correct/nonNils)
+if system!='spotlight':
+	with open('%s_misses.tsv' % collection, 'w') as w:
+		w.write(toWrite)
+
+print("GENERAL STATS: Articles", len(articles), "non-Nils", nonNils, "Nils", nils)
+print("CANDIDATE GENERATION STATS: Recal of candidates", found, "%recall of candidates", found/nonNils, "Recall including Nils", found+nils, "%recall including nils", (found+nils)/(nonNils+nils))
+print("PAGERANK STATS (nonNils): Precision@1", correct['1']/nonNils, "Precision@2", correct['2']/nonNils, "Precision@3", correct['3']/nonNils, "Precision@4", correct['4']/nonNils, "Precision@5", correct['5']/nonNils)
 t2=time.time()
 print("Took %f seconds" % (t2-t1))
 

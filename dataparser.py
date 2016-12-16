@@ -92,8 +92,7 @@ def load_article_from_conll_file(conll_file):
 def load_article_from_xml_files(location, collection='msnbc'):
 	news_items=set()
 	for filename in glob.glob(location):
-		print(filename)
-		parser = etree.XMLParser(recover=True, encoding='latin1')
+		parser = etree.XMLParser(recover=True)
 		xml = etree.parse(filename, parser)
 		news_item_obj = classes.NewsItem(
 			identifier=filename,
@@ -103,7 +102,8 @@ def load_article_from_xml_files(location, collection='msnbc'):
 			mention=entity_mention.find('SurfaceForm').text.strip()
 			offset=int(entity_mention.find('Offset').text.strip())
 			length=int(entity_mention.find('Length').text.strip())
-			gold_link=utils.getLinkRedirect(utils.normalizeURL(entity_mention.find('ChosenAnnotation').text.strip()))
+			raw_gold=entity_mention.find('ChosenAnnotation').text
+			gold_link=utils.getLinkRedirect(utils.normalizeURL(raw_gold))
 			entity_obj = classes.EntityMention(
 				begin_index=offset,
 				end_index=offset + length,
