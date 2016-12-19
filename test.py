@@ -46,6 +46,7 @@ found=0
 correct={'1': 0, '2': 0, '3': 0, '4': 0, '5': 0}
 t1=time.time()
 toWrite=""
+totalCandidates=0
 for article in articles:
 	if article.collection!=collection:
 		continue
@@ -66,10 +67,12 @@ for article in articles:
 							cands |= m2.candidates
 			# End of local candidates generation
 		m.candidates=cands
-		if m.gold_link not in NILS:# NILS=['--NME--', '*null*']
+		orderedLinks=ranking.getMostPopularCandidates(m.candidates)
+		totalCandidates+=len(orderedLinks)
+		if m.gold_link not in NILS and ranking.getPageRank(m.gold_link):# NILS=['--NME--', '*null*']
+
 			if m.gold_link in m.candidates:  #, m.gold_link, m.candidates)
 				found+=1
-				orderedLinks=ranking.getMostPopularCandidates(m.candidates)
 				try:
 					golden_rank=orderedLinks.index(m.gold_link)+1
 					for k in correct:
@@ -84,12 +87,14 @@ for article in articles:
 			nils+=1
 		current+=1
 
+
 if system!='spotlight':
 	with open('%s_misses.tsv' % collection, 'w') as w:
 		w.write(toWrite)
 
 print("GENERAL STATS: Articles", len(articles), "non-Nils", nonNils, "Nils", nils)
 print("CANDIDATE GENERATION STATS: Recal of candidates", found, "%recall of candidates", found/nonNils, "Recall including Nils", found+nils, "%recall including nils", (found+nils)/(nonNils+nils))
+print("Average candidates", totalCandidates/(nils+nonNils))
 print("PAGERANK STATS (nonNils): Precision@1", correct['1']/nonNils, "Precision@2", correct['2']/nonNils, "Precision@3", correct['3']/nonNils, "Precision@4", correct['4']/nonNils, "Precision@5", correct['5']/nonNils)
 t2=time.time()
 print("Took %f seconds" % (t2-t1))

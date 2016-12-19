@@ -6,3 +6,4 @@ data/
 to_cache/
 *.tsv
 *.pyc
+naf/

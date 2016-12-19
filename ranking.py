@@ -15,6 +15,12 @@ def getMostPopularCandidates(candidates):
 	sortedCands=sorted(candScores.items(), key=lambda t:float(t[1]), reverse=True)
 	return list(x[0] for x in sortedCands)#keys()
 
+def getPageRank(c):
+	try:
+		return float(rds.get('pr:%s' % c))
+	except:
+		return None
+
 #s=set(['Barack_Obama', 'Bill_Clinton', 'Amsterdam', 'United_States'])
 #print(getMostPopularK(s, 2))
 

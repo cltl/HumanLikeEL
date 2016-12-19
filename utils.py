@@ -61,23 +61,23 @@ def generateCandidatesWithLOTUS(mention, minSize=20, maxSize=200):
 	return (mention, cands)
 
 def getCandidatesForLemma(lemma, min_size, max_size):
-	hits=[]
+	hits=set()
 	#rank='lengthnorm'
 	rank='psf'
-	for match in ["phrase", "conjunct"]:
+	for match in ["phrase", "conjunct", "terms"]:
 		url="http://lotus.lodlaundromat.org/retrieve?size=" + str(max_size) + "&match=" + match + "&rank=" + rank + "&noblank=true&" + urllib.parse.urlencode({"string": lemma, "predicate": "label", "subject": "\"http://dbpedia.org/resource\""})
 		r = requests.get(url=url)
 		content = r.json()
-
-		these_hits=content["hits"]
-		hits=hits + these_hits
-		if content["numhits"]>=min_size or len(lemma.split(' '))==1:
+		if content['numhits']>0:
+			these_hits=set(list(s['subject'] for s in content["hits"]))
+			hits |= these_hits
+		if len(hits)>=min_size or len(lemma.split(' '))==1:
 			break
 
 	subjects=set()
 	for hit in hits:
-		if "Category" not in hit["subject"]:
-			redirected=getLinkRedirect(normalizeURL(hit["subject"]))
+		if "Category" not in hit:
+			redirected=getLinkRedirect(normalizeURL(hit))
 	
 			subject=getLinkDisambiguations(redirected)
 			if subject:
