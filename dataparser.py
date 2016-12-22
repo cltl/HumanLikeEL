@@ -38,11 +38,14 @@ def load_article_from_nif_file(nif_file):
 		} ORDER BY ?start"""
 		qres_entities = g.query(query)
 		for entity in qres_entities:
+			gold_link=utils.getLinkRedirect(utils.normalizeURL(str(entity['gold'])))
+			if utils.computePR(gold_link)==0:
+				gold_link=None
 			entity_obj = classes.EntityMention(
 				begin_index=int(entity['start']),
 				end_index=int(entity['end']),
 				mention=str(entity['mention']),
-				gold_link=utils.getLinkRedirect(utils.normalizeURL(str(entity['gold'])))
+				gold_link=gold_link	
 			)
 			news_item_obj.entity_mentions.append(entity_obj)
 		news_items.add(news_item_obj)
@@ -77,7 +80,9 @@ def load_article_from_conll_file(conll_file):
 			word=elements[0]
 			if len(elements)>3 and elements[1]=='B':
 				mention=elements[2]
-				gold=elements[3]
+				gold=utils.getLinkRedirect(elements[3])
+				if utils.computePR(gold)==0:
+					gold=None
 				entity_obj = classes.EntityMention(
                          		begin_index=current_offset,
                                 	end_index=current_offset + len(mention),
@@ -104,6 +109,8 @@ def load_article_from_xml_files(location, collection='msnbc'):
 			length=int(entity_mention.find('Length').text.strip())
 			raw_gold=entity_mention.find('ChosenAnnotation').text
 			gold_link=utils.getLinkRedirect(utils.normalizeURL(raw_gold))
+			if utils.computePR(gold_link)==0:
+				gold_link=None
 			entity_obj = classes.EntityMention(
 				begin_index=offset,
 				end_index=offset + length,

@@ -22,7 +22,7 @@ class EntityMention:
     def __init__(self, mention, 
                  begin_index, end_index,
                  gold_link=None,
-		 the_type=None, sentence=None, sys_link=None): #, exact_match=False):
+		 the_type=None, sentence=None, sys_link=None, anchor_mention=None): #, exact_match=False):
         self.sentence = sentence         # e.g. 4 -> which sentence is the entity mentioned in
         self.mention = mention           # e.g. "John Smith" -> the mention of an entity as found in text
         self.the_type = the_type         # e.g. "Person" | "http://dbpedia.org/ontology/Person"
@@ -31,7 +31,7 @@ class EntityMention:
         self.gold_link = gold_link	 # gold link if existing
         self.candidates = set()		 # candidates from LOTUS
         self.sys_link = sys_link	 # final system link
-        self.previous_mentions = set() 	 # previous coreferential mentions of the same entity
+        self.anchor_mention = anchor_mention 	 # previous coreferential mentions of the same entity
 
 class NewsItem:
     """

@@ -6,13 +6,14 @@ import systemparser
 import candidates
 import ranking
 import globals
+import utils
 
 import pickle
 import sys
 import time
+import math
 
-
-NILS=['--NME--', '*null*']
+NILS=['--NME--', '*null*', None]
 
 # for precision@k
 maxK=5
@@ -29,7 +30,8 @@ def evaluate(articles, collection, system):
 	nonNils=0
 	nils=0
 	found=0
-	correct={'1': 0, '2': 0, '3': 0, '4': 0, '5': 0}
+	correct=0
+	correctJSON={'1': 0, '2': 0, '3': 0, '4': 0, '5': 0}
 	t1=time.time()
 	toWrite=""
 	totalCandidates=0
@@ -39,13 +41,39 @@ def evaluate(articles, collection, system):
 		if system!='spotlight':
 			entity_mentions=candidates.parallelizeCandidateGeneration(article.entity_mentions)
 			article.entity_mentions=entity_mentions
+			current=0
 			for em in article.entity_mentions:
-				print(em.mention, em.gold_link)
+				em.anchor_mention=utils.setAnchorMention(em.mention, article.entity_mentions[:current-1])
+				if em.anchor_mention:
+					em.sys_link=em.anchor_mention.sys_link
+				else:
+					maxScore=0.0
+					maxCandidate=None
+					for c in em.candidates:
+						c.score=c.lotus_score*c.ss_score*math.sqrt(c.tp_score*c.pr_score)
+						print(c.subject, c.score, c.string, c.tp_score, c.pr_score, c.lotus_score, c.ss_score)
+						if c.ss_score<1.0:
+							continue
+						if c.score>maxScore:
+							maxScore=c.score
+							maxCandidate=c.subject
+					em.sys_link=maxCandidate
+				print("################### VERDICT ####################")
+				print(em.mention, em.gold_link, em.sys_link)
+				print("################################################")
 				print()
-				for c in em.candidates:
-					print(c.subject, c.string, c.tp_score, c.pr_score, c.lotus_score, c.ss_score)
-				print()
-		break
+				current+=1
+				if em.gold_link not in NILS:
+					nonNils+=1
+					if em.gold_link==em.sys_link:
+						correct+=1
+				else:
+					nils+=1
+					if em.sys_link is None:
+						correct+=1
+	t2=time.time()
+	print(t2-t1)
+	print("CORRECT ALL", correct/(nils+nonNils))
 	return article.entity_mentions
 
 def run(collection='msnbc', system='our'):

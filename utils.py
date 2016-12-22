@@ -10,6 +10,12 @@ headers = {'Accept': 'application/json'}
 
 rds=redis.Redis()
 
+def setAnchorMention(m, em_objs):
+	for em_obj in em_objs:
+		if isSubstring(m, em_obj.mention) or isAbbreviation(m, em_obj.mention) and m!=em_obj.mention:
+			return em_obj
+	return None
+
 def sortAndReturnKeys(candScores):
         sortedCands=sorted(candScores.items(), key=lambda t:float(t[1]), reverse=True)
         return list(x[0] for x in sortedCands)
@@ -19,7 +25,7 @@ def computeTP(url):
 	return pkl[url] if url in pkl else 0.0
 
 def computeSS(s1, s2):
-	return Levenshtein.ratio(s1.lower(), s2.lower())
+	return Levenshtein.ratio(s1.strip().lower(), s2.strip().lower())
 
 def computePR(url):
 	val=rds.get('pr:%s' % url)

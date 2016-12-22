@@ -2,6 +2,7 @@ import classes
 import utils
 
 from orderedset import OrderedSet
+from collections import defaultdict
 import urllib.parse
 import requests
 from multiprocessing.dummy import Pool as ThreadPool
@@ -43,36 +44,39 @@ def generateCandidatesWithLOTUS(mention, minSize=20, maxSize=200):
         return (mention, cands)
 
 def getCandidatesForLemma(lemma, min_size, max_size):
-        hits=OrderedSet()
-        uniqueSubs=set()
-        #rank='lengthnorm'
-        rank='psf'
+	hits=OrderedSet()
+	uniqueSubs=defaultdict(int)
+	#rank='lengthnorm'
+	rank='psf'
 
-        for match in ["phrase", "conjunct", "terms"]:
-                url="http://lotus.lodlaundromat.org/retrieve?size=" + str(max_size) + "&match=" + match + "&rank=" + rank + "&noblank=true&" + urllib.parse.urlencode({"string": lemma, "predicate": "label", "subject": "\"http://dbpedia.org/resource\""})
-                r = requests.get(url=url)
-                content = r.json()
-                if content['numhits']>0:
-                        for s in content["hits"]:
-                                sub=s['subject']
+	for match in ["phrase", "conjunct", "terms"]:
+		url="http://lotus.lodlaundromat.org/retrieve?size=" + str(max_size) + "&match=" + match + "&rank=" + rank + "&noblank=true&" + urllib.parse.urlencode({"string": lemma, "predicate": "label", "subject": "\"http://dbpedia.org/resource\""})
+		r = requests.get(url=url)
+		content = r.json()
+		if content['numhits']>0:
+			for s in content["hits"]:
+				sub=s['subject']
 
-                                if "Category" not in sub:
-                                        redirected=utils.getLinkRedirect(utils.normalizeURL(sub))
+				if "Category" not in sub:
+					redirected=utils.getLinkRedirect(utils.normalizeURL(sub))
 
-                                        disSubjects=utils.getLinkDisambiguations(redirected)
-                                        if disSubjects:
-                                                for ds in disSubjects:
-                                                        if ds not in uniqueSubs:
-                                                                uniqueSubs.add(ds)
-                                                                candidate = createCandidate(ds, s, lemma)
-                                                                hits.add(candidate)
-                                        else:
-                                                if redirected not in uniqueSubs:
-                                                        uniqueSubs.add(redirected)
-                                                        candidate=createCandidate(redirected, s, lemma)  
-                                                        hits.add(candidate)
+					disSubjects=utils.getLinkDisambiguations(redirected)
+					if disSubjects:
+						for ds in disSubjects:
+							if ds not in uniqueSubs:
+								candidate = createCandidate(ds, s, lemma)
+								hits.add(candidate)
+							uniqueSubs[ds]+=s['score']
+					else:
+						if redirected not in uniqueSubs:
+							candidate=createCandidate(redirected, s, lemma)  
+							hits.add(candidate)
+							uniqueSubs[redirected]+=s['score']
+		if len(uniqueSubs)>=min_size or len(lemma.split(' '))==1:
+			break
 
-                if len(uniqueSubs)>=min_size or len(lemma.split(' '))==1:
-                        break
-        return hits
+	for c in hits:
+		c.lotus_score=uniqueSubs[c.subject]
+
+	return hits
 
