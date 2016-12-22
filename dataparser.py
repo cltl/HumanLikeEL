@@ -115,14 +115,12 @@ def load_article_from_xml_files(location, collection='msnbc'):
 	return news_items
 
 def load_article_from_naf_file(filename, collection='sm'):
-	news_items=set()
 	parser = etree.XMLParser(recover=True)
 	xml = etree.parse(filename, parser)
 	news_item_obj = classes.NewsItem(
 		identifier=filename,
 		collection=collection
 	)
-	print(news_item_obj.collection)
 	for entity_mention in xml.iterfind('entities/entity'):
 
 		iden2wf_el = {int(wf_el.get('id')[1:]): wf_el
@@ -134,7 +132,6 @@ def load_article_from_naf_file(filename, collection='sm'):
 		# get mention
 		mention = ' '.join([iden2wf_el[iden].text
 			for iden in idens])
-		print(mention)
 		# get start and end offset
 		wf_el = iden2wf_el[idens[0]]
 		begin_index = int(wf_el.get('offset'))
@@ -145,16 +142,14 @@ def load_article_from_naf_file(filename, collection='sm'):
 			end_wf_el = iden2wf_el[idens[-1]]
 			end_index = int(end_wf_el.get('offset')) + int(end_wf_el.get('length'))
 
-		print(begin_index, end_index)
 		entity_obj = classes.EntityMention(
 			begin_index=begin_index,
 			end_index=end_index,
 			mention=mention
 		)
 		news_item_obj.entity_mentions.append(entity_obj)
-	news_items.add(news_item_obj)
-	return news_items
+	return news_item_obj
 
 #load_article_from_naf_file("naf/123ffd96-2b39-42f8-a961-428210b29ea5.in.naf")
-load_article_from_naf_file("naf/123a3f1d-483c-427b-8749-db298859b836.in.naf")
+#load_article_from_naf_file("naf/123a3f1d-483c-427b-8749-db298859b836.in.naf")
 #load_article_from_xml_files('data/WikificationACL2011Data/MSNBC/Problems/*')

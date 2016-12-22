@@ -1,45 +1,42 @@
-import requests
 import urllib.parse
-import urllib.request
-from multiprocessing.dummy import Pool as ThreadPool 
 import redis
+from py2neo import Graph
+import Levenshtein
 
-sparql_endpoint="http://sparql.fii800.lod.labs.vu.nl/sparql"
-#sparql_endpoint="http://dbpedia.org/sparql"
-threads=32
+import globals
 
 urlPostPrefixSpotlight = "http://spotlight.sztaki.hu:2222/rest/candidates"
 headers = {'Accept': 'application/json'}
 
 rds=redis.Redis()
 
-def yieldMentions(em):
-    for entity in em:
-        yield entity.mention
+def sortAndReturnKeys(candScores):
+        sortedCands=sorted(candScores.items(), key=lambda t:float(t[1]), reverse=True)
+        return list(x[0] for x in sortedCands)
 
-def parallelizeCandidateGeneration(entity_mentions, ranker='psf'):
-	global threads
-	pool = ThreadPool(threads) 
-	iterableMentions = yieldMentions(entity_mentions)
-	results = pool.map(generateCandidatesWithLOTUS, iterableMentions)
-	return dict(results)
+def computeTP(url):
+	pkl=globals.pkl
+	return pkl[url] if url in pkl else 0.0
+
+def computeSS(s1, s2):
+	return Levenshtein.ratio(s1.lower(), s2.lower())
+
+def computePR(url):
+	val=rds.get('pr:%s' % url)
+	return float(val) if val else 0.0
+
+def neo4jPath(m1,m2):
+
+	gn=Graph()
+	query="MATCH path=shortestPath((m:Page {name:\"%s\"})-[LINKS_TO*1..10]-(n:Page {name:\"%s\"})) RETURN LENGTH(path) AS length, path, m, n" % (m1, m2)
+	path=gn.run(query).evaluate()
+	return path
 
 def normalizeURL(s):
 	if s:
 		return urllib.parse.unquote(s.replace("http://en.wikipedia.org/wiki/", "").replace("http://dbpedia.org/resource/", ""). replace("http://dbpedia.org/page/", "").strip().strip('"'))
 	else:
 		return '--NME--'
-
-def get_dbpedia_results(query):
-	q = {'query': query, 'format': 'json'}
-	global sparql_endpoint
-	url = sparql_endpoint + '?' + urllib.parse.urlencode(q)
-	r = requests.get(url=url)
-	try:
-        	page = r.json()
-        	return page["results"]["bindings"]
-	except ValueError:
-		return []
 
 def getLinkDisambiguations(link):
 	red=rds.get('dis:%s' % link)
@@ -54,37 +51,6 @@ def getLinkRedirect(link):
 		return red.decode('UTF-8')
 	else:
 		return link
-
-def generateCandidatesWithLOTUS(mention, minSize=20, maxSize=200):
-	normalized=normalizeURL(mention)
-	cands=getCandidatesForLemma(mention, minSize, maxSize)
-	return (mention, cands)
-
-def getCandidatesForLemma(lemma, min_size, max_size):
-	hits=set()
-	#rank='lengthnorm'
-	rank='psf'
-	for match in ["phrase", "conjunct", "terms"]:
-		url="http://lotus.lodlaundromat.org/retrieve?size=" + str(max_size) + "&match=" + match + "&rank=" + rank + "&noblank=true&" + urllib.parse.urlencode({"string": lemma, "predicate": "label", "subject": "\"http://dbpedia.org/resource\""})
-		r = requests.get(url=url)
-		content = r.json()
-		if content['numhits']>0:
-			these_hits=set(list(s['subject'] for s in content["hits"]))
-			hits |= these_hits
-		if len(hits)>=min_size or len(lemma.split(' '))==1:
-			break
-
-	subjects=set()
-	for hit in hits:
-		if "Category" not in hit:
-			redirected=getLinkRedirect(normalizeURL(hit))
-	
-			subject=getLinkDisambiguations(redirected)
-			if subject:
-				subjects |= subject
-			else:
-				subjects.add(redirected)
-	return subjects
 
 def getInitials(entity_string):
         initials=""
