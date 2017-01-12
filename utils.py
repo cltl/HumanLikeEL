@@ -31,12 +31,13 @@ def computePR(url):
 	val=rds.get('pr:%s' % url)
 	return float(val) if val else 0.0
 
-def neo4jPath(m1,m2):
-
+def neo4jPath(t):
+	m1=t[0]
+	m2=t[1]
 	gn=Graph()
 	query="MATCH path=shortestPath((m:Page {name:\"%s\"})-[LINKS_TO*1..10]-(n:Page {name:\"%s\"})) RETURN LENGTH(path) AS length, path, m, n" % (m1, m2)
 	path=gn.run(query).evaluate()
-	return path
+	return t,path
 
 def normalizeURL(s):
 	if s:
@@ -81,7 +82,7 @@ def isAbbreviation(m1, m2):
 		return m1==getInitials(m2)
 	
 def isSubstring(m1, m2):
-	return m1 in m2 and m1!=m2
+	return m1.lower() in m2.lower() and m1.lower()!=m2.lower()
 
 def analyzeEntities(articles, collection):
         c=0

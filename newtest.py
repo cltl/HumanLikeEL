@@ -12,6 +12,7 @@ import pickle
 import sys
 import time
 import math
+from collections import defaultdict
 
 NILS=['--NME--', '*null*', None]
 
@@ -35,6 +36,8 @@ def evaluate(articles, collection, system):
 	t1=time.time()
 	toWrite=""
 	totalCandidates=0
+	howManyOnes=defaultdict(int)
+	howManyCorrect=defaultdict(int)
 	for article in articles:
 		if article.collection!=collection:
 			continue
@@ -45,35 +48,47 @@ def evaluate(articles, collection, system):
 			for em in article.entity_mentions:
 				em.anchor_mention=utils.setAnchorMention(em.mention, article.entity_mentions[:current-1])
 				if em.anchor_mention:
+					ones=-1
 					em.sys_link=em.anchor_mention.sys_link
 				else:
+					ones=0
 					maxScore=0.0
 					maxCandidate=None
 					for c in em.candidates:
-						c.score=c.lotus_score*c.ss_score*math.sqrt(c.tp_score*c.pr_score)
-						print(c.subject, c.score, c.string, c.tp_score, c.pr_score, c.lotus_score, c.ss_score)
-						if c.ss_score<1.0:
+						c.score=c.lotus_score*c.ss_score*math.sqrt(c.pr_score)
+						if c.ss_score<0.9:
 							continue
+						ones+=1
+						#print(c.subject, c.score, c.string, c.tp_score, c.pr_score, c.lotus_score, c.ss_score)
 						if c.score>maxScore:
 							maxScore=c.score
 							maxCandidate=c.subject
 					em.sys_link=maxCandidate
-				print("################### VERDICT ####################")
-				print(em.mention, em.gold_link, em.sys_link)
-				print("################################################")
-				print()
+				if ones==0:
+					print("################### VERDICT ####################")
+					print(em.mention, em.gold_link, em.sys_link)
+					for c in em.candidates:
+						print(c.subject, c.ss_score)
+					print("################################################")
+					print()
 				current+=1
 				if em.gold_link not in NILS:
 					nonNils+=1
 					if em.gold_link==em.sys_link:
 						correct+=1
+						howManyCorrect[ones]+=1
 				else:
 					nils+=1
 					if em.sys_link is None:
 						correct+=1
+						howManyCorrect[ones]+=1
+				howManyOnes[ones]+=1
+				ones=0
 	t2=time.time()
 	print(t2-t1)
 	print("CORRECT ALL", correct/(nils+nonNils))
+	print("SS>0.9", howManyOnes)
+	print("SS>0.9, correct", howManyCorrect)
 	return article.entity_mentions
 
 def run(collection='msnbc', system='our'):

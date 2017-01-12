@@ -46,8 +46,8 @@ def generateCandidatesWithLOTUS(mention, minSize=20, maxSize=200):
 def getCandidatesForLemma(lemma, min_size, max_size):
 	hits=OrderedSet()
 	uniqueSubs=defaultdict(int)
-	#rank='lengthnorm'
-	rank='psf'
+	rank='lengthnorm'
+	#rank='psf'
 
 	for match in ["phrase", "conjunct", "terms"]:
 		url="http://lotus.lodlaundromat.org/retrieve?size=" + str(max_size) + "&match=" + match + "&rank=" + rank + "&noblank=true&" + urllib.parse.urlencode({"string": lemma, "predicate": "label", "subject": "\"http://dbpedia.org/resource\""})
