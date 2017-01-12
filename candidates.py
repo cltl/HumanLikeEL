@@ -24,18 +24,34 @@ def yieldMentions(em):
     for entity in em: 
         yield entity.mention 
 
-def mapCandidatesToMentions(em, r):
+def mapCandidatesToMentions(em, r, prs, lotuses, tps):
 	for mention_obj in em:
 		mention=mention_obj.mention
 		mention_obj.candidates=r[mention]
+		mention_obj.total_pr=prs[mention]
+		mention_obj.total_lotus=lotuses[mention]
+		mention_obj.total_tp=tps[mention]
 	return em
+
+def computeTotals(r):
+	totalPR=defaultdict(float)
+	totalLotus=defaultdict(float)
+	totalTP=defaultdict(float)
+	for mention in r:
+		candidates=r[mention]
+		for c in candidates:
+			totalPR[mention]+=c.pr_score
+			totalLotus[mention]+=c.lotus_score
+			totalTP[mention]+=c.tp_score
+	return totalPR, totalLotus, totalTP
 
 def parallelizeCandidateGeneration(entity_mentions): 
         global threads 
         pool = ThreadPool(THREADS)  
         iterableMentions = yieldMentions(entity_mentions) 
-        results = pool.map(generateCandidatesWithLOTUS, iterableMentions) 
-        new_entity_mentions = mapCandidatesToMentions(entity_mentions, dict(results)) 
+        results = pool.map(generateCandidatesWithLOTUS, iterableMentions)
+        totalPR, totalLotus, totalTP = computeTotals(dict(results))
+        new_entity_mentions = mapCandidatesToMentions(entity_mentions, dict(results), totalPR, totalLotus, totalTP) 
         return new_entity_mentions 
 
 def generateCandidatesWithLOTUS(mention, minSize=20, maxSize=200):
@@ -49,7 +65,7 @@ def getCandidatesForLemma(lemma, min_size, max_size):
 	rank='lengthnorm'
 	#rank='psf'
 
-	for match in ["phrase", "conjunct", "terms"]:
+	for match in ["phrase", "conjunct"]:
 		url="http://lotus.lodlaundromat.org/retrieve?size=" + str(max_size) + "&match=" + match + "&rank=" + rank + "&noblank=true&" + urllib.parse.urlencode({"string": lemma, "predicate": "label", "subject": "\"http://dbpedia.org/resource\""})
 		r = requests.get(url=url)
 		content = r.json()

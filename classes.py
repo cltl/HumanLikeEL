@@ -4,7 +4,7 @@ class Candidate:
 	"""
 
 	def __init__(self, subject, predicate="", string="", the_type=None, 
-		lotus_score=0.0, tp_score=0.0, pr_score=0.0, ss_score=0.0):
+		lotus_score=0.0, tp_score=0.0, pr_score=0.0, ss_score=0.0, score=0.0):
 		self.subject = subject		 # e.g. John_Smith 
 		self.predicate = predicate 	 # e.g. dbo:label
 		self.string = string             # e.g. "John Smith" -> the mention of an entity as found in text
@@ -13,6 +13,7 @@ class Candidate:
 		self.tp_score = tp_score 	 # score according on temporal popularity
 		self.pr_score = pr_score	 # score according to pagerank
 		self.ss_score = ss_score		 # string similarity to the entity mention
+		self.score = score		 # overall score
 
 class EntityMention:
     """
@@ -22,7 +23,8 @@ class EntityMention:
     def __init__(self, mention, 
                  begin_index, end_index,
                  gold_link=None,
-		 the_type=None, sentence=None, sys_link=None, anchor_mention=None): #, exact_match=False):
+		 the_type=None, sentence=None, sys_link=None, score=0.0, anchor_mention=None,
+		 total_pr=0.0, total_lotus=0.0, total_tp=0.0): #, exact_match=False):
         self.sentence = sentence         # e.g. 4 -> which sentence is the entity mentioned in
         self.mention = mention           # e.g. "John Smith" -> the mention of an entity as found in text
         self.the_type = the_type         # e.g. "Person" | "http://dbpedia.org/ontology/Person"
@@ -31,7 +33,11 @@ class EntityMention:
         self.gold_link = gold_link	 # gold link if existing
         self.candidates = set()		 # candidates from LOTUS
         self.sys_link = sys_link	 # final system link
+        self.score = score		 # score of the system link
         self.anchor_mention = anchor_mention 	 # previous coreferential mentions of the same entity
+        self.total_pr = total_pr	 # total PageRank of all candidates
+        self.total_lotus = total_lotus	 # total LOTUS score of all candidates
+        self.total_tp = total_tp	 # total TP of all candidates
 
 class NewsItem:
     """

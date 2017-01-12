@@ -10,6 +10,17 @@ headers = {'Accept': 'application/json'}
 
 rds=redis.Redis()
 
+def getNearN(mentions, current, M=2, N=1):
+	previous=mentions[max(current-M, 0):current]
+	upcoming=mentions[min(current+1, len(mentions)):min(current+N, len(mentions))]
+	return list(set(previous).union(upcoming))
+
+def getLastN(mentions, current, N=10):
+	if current>=N:
+		return mentions[current-N: current]
+	else:
+		return list(set(mentions[0:current]))#.union(mentions[current-N:]))
+
 def setAnchorMention(m, em_objs):
 	for em_obj in em_objs:
 		if isSubstring(m, em_obj.mention) or isAbbreviation(m, em_obj.mention) and m!=em_obj.mention:
@@ -37,7 +48,7 @@ def neo4jPath(t):
 	gn=Graph()
 	query="MATCH path=shortestPath((m:Page {name:\"%s\"})-[LINKS_TO*1..10]-(n:Page {name:\"%s\"})) RETURN LENGTH(path) AS length, path, m, n" % (m1, m2)
 	path=gn.run(query).evaluate()
-	return t,path
+	return path
 
 def normalizeURL(s):
 	if s:
