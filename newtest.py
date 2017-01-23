@@ -20,8 +20,8 @@ maxK=5
 N=10
 month='200712'
 
-globals.pkl=pickle.load(open(month + '_agg.p', 'rb'))
-#globals.pkl={}
+#globals.pkl=pickle.load(open(month + '_agg.p', 'rb'))
+globals.pkl={}
 
 def evaluate(articles, collection, system):
 	all_correct=0
@@ -48,7 +48,7 @@ def evaluate(articles, collection, system):
 		for em in entity_mentions:
 			if em.gold_link not in NILS:
 				nonNils+=1
-				if em.gold_link==em.sys_link:
+				if em.sys_link and em.gold_link==em.sys_link.subject:
 					correct+=1
 					#howManyCorrect[ones]+=1
 			else:
@@ -56,16 +56,6 @@ def evaluate(articles, collection, system):
 				if em.sys_link is None:
 					correct+=1
 					#howManyCorrect[ones]+=1
-			#if ones==0: 
-			print("################### VERDICT ####################") 
-			print(em.mention, em.gold_link, em.sys_link) 
-			#for c in em.candidates: 
-			#       print(c.subject, c.ss_score) 
-			print("################################################") 
-			print()
-
-			#howManyOnes[ones]+=1
-			#ones=0
 	t2=time.time()
 	print(t2-t1)
 	print("CORRECT ALL", correct/(nils+nonNils))
@@ -84,7 +74,7 @@ def run(collection='msnbc', system='our'):
                 articles=dataparser.load_article_from_nif_file(path + test_file)
         else:
                 if collection=='msnbc':
-                        test_file='WikificationACL2011Data/MSNBC/Problems/*'
+                        test_file='WikificationACL2011Data/MSNBC/AllProblems/*'
                 elif collection=='ace2004':
                         test_file='WikificationACL2011Data/ACE2004_Coref_Turking/Dev/ProblemsNoTranscripts/*'
                 else:

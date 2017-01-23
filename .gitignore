@@ -6,4 +6,5 @@ data/
 to_cache/
 *.tsv
 *.pyc
+resources/
 naf/

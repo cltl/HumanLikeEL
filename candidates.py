@@ -40,9 +40,9 @@ def computeTotals(r):
 	for mention in r:
 		candidates=r[mention]
 		for c in candidates:
-			totalPR[mention]+=c.pr_score
-			totalLotus[mention]+=c.lotus_score
-			totalTP[mention]+=c.tp_score
+			totalPR[mention]=max(c.pr_score, totalPR[mention])
+			totalLotus[mention]=max(c.lotus_score, totalLotus[mention])
+			totalTP[mention]=max(c.tp_score, totalTP[mention])
 	return totalPR, totalLotus, totalTP
 
 def parallelizeCandidateGeneration(entity_mentions): 

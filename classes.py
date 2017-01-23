@@ -33,7 +33,6 @@ class EntityMention:
         self.gold_link = gold_link	 # gold link if existing
         self.candidates = set()		 # candidates from LOTUS
         self.sys_link = sys_link	 # final system link
-        self.score = score		 # score of the system link
         self.anchor_mention = anchor_mention 	 # previous coreferential mentions of the same entity
         self.total_pr = total_pr	 # total PageRank of all candidates
         self.total_lotus = total_lotus	 # total LOTUS score of all candidates
