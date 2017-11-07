@@ -1,9 +1,19 @@
 import json
 import urllib.parse
 import urllib.request
+from urllib.request import urlopen, Request
+from urllib.parse import urlencode
 
 spotlightUrl = 'http://spotlight.sztaki.hu:2222/rest/candidates?'
 headers = {'Accept': 'application/json'}
+
+agdistisUrl="http://139.18.2.164:8080/AGDISTIS"
+
+def disambiguate(xmlText, type='agdistis'):
+	params={"text": xmlText, "type": type}
+	request = Request(agdistisUrl, urlencode(params).encode())
+	thisJson = urlopen(request).read().decode()
+	return json.loads(thisJson)
 
 def annotateSpotlight(query):
 	args = urllib.parse.urlencode([("text", query), ("confidence", 0), ("support", 0)]).encode("utf-8")

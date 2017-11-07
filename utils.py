@@ -1,6 +1,6 @@
 import urllib.parse
 import redis
-from py2neo import Graph
+#from py2neo import Graph
 import Levenshtein
 
 import globals
