@@ -2,6 +2,7 @@ from collections import Counter, OrderedDict
 import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import linregress
+from collections import defaultdict
 
 def calculate_slope(cnt):
 	y = OrderedDict(cnt.most_common())
@@ -9,17 +10,54 @@ def calculate_slope(cnt):
 	k=np.arange(0,len(v),1)
 	return linregress(k,v)
 
-def get_mention_counts(articles):
+def get_mention_counts(articles, skip_nils=True):
+	gold_forms=[]
 	gold_links=[]
 	for example_article in articles:
 		for entity in example_article.entity_mentions:
 			mention=entity.mention
-	    #   	 print(entity.gold_link)
-			gold_links.append(entity.gold_link)
-	cnt=Counter(gold_links)
-	return cnt
+			meaning=entity.gold_link
+			if not skip_nils or meaning!='--NME--':
+				gold_forms.append(mention)
+				gold_links.append(meaning)
+	cnt_instances=Counter(gold_links)
+	cnt_forms=Counter(gold_forms)
+	return cnt_instances, cnt_forms
 
-def plot_freq_dist(cnt, title=None, loglog=False, b=2):
+def get_interpretations_and_references(articles, skip_nils=True):
+	interpretations=defaultdict(set)
+	references = defaultdict(set)
+	for article in articles:
+		for mention in article.entity_mentions:
+			form=mention.mention
+			meaning=mention.gold_link
+			if not skip_nils or meaning!='--NME--':
+		    		interpretations[form].add(meaning)
+			if meaning!='--NME--':
+		    		references[meaning].add(form)
+	return interpretations, references
+
+def get_instance_distribution(articles, instance):
+        references = defaultdict(int)
+        for article in articles:
+                for mention in article.entity_mentions:
+                        form=mention.mention
+                        meaning=mention.gold_link
+                        if meaning==instance:
+                                references[form]+=1
+        return sorted(references.items(), key=lambda x: x[1], reverse=True)
+
+def get_form_distribution(articles, the_form):
+        instances = defaultdict(int)
+        for article in articles:
+                for mention in article.entity_mentions:
+                        form=mention.mention
+                        meaning=mention.gold_link
+                        if form==the_form and meaning!='--NME--':
+                                instances[meaning]+=1
+        return sorted(instances.items(), key=lambda x: x[1], reverse=True)
+
+def plot_freq_dist(cnt, title=None, x_axis='Entity mentions', loglog=False, b=2):
 	y = OrderedDict(cnt.most_common())
 	v=list(y.values())
 	k=np.arange(0,len(v),1)
@@ -28,7 +66,44 @@ def plot_freq_dist(cnt, title=None, loglog=False, b=2):
 	else:
 		plt.plot(k,v)
 	plt.ylabel('Frequency')
-	plt.xlabel('Entity mentions')
+	plt.xlabel(x_axis)
 	if title:
-		plt.title('Distribution of %s' % title)
+		if loglog:
+			plt.title('Distribution of %s (log-log)' % title)
+		else:
+			plt.title('Distribution of %s' % title)
 	plt.show()
+
+def frequency_correlation(freq_dist, other_dist, min_frequency=0):
+
+	other_per_frequency = defaultdict(int)
+	count_per_frequency = defaultdict(int)
+	for form,frequency in freq_dist.items():
+    		if frequency>min_frequency:
+        		#print(form,frequency, ambiguity[form])
+        		count_per_frequency[frequency]+=1
+        		other_per_frequency[frequency]+=other_dist[form]
+
+	x=[]
+	y=[]
+	for frequency in sorted(count_per_frequency):
+    		print(frequency, other_per_frequency[frequency]/count_per_frequency[frequency])
+    		x.append(frequency)
+    		y.append(other_per_frequency[frequency]/count_per_frequency[frequency])
+	plt.plot(x,y)
+	plt.show()
+
+################# SYSTEM UTILS #####################
+
+def overall_performance(articles, skip_nils=True):
+	correct=0
+	total=0
+	for article in articles:
+		for entity in article.entity_mentions:
+			if skip_nils and entity.gold_link=='--NME--':
+		    		continue
+			if entity.gold_link==entity.sys_link:
+		    		correct+=1
+			total+=1
+	print(correct, total)
+	return correct/total
