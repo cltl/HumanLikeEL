@@ -107,3 +107,31 @@ def overall_performance(articles, skip_nils=True):
 			total+=1
 	print(correct, total)
 	return correct/total
+
+def prepare_ranks(correct_per_form, total_per_form, min_frequency=0):
+    correct_per_rank=defaultdict(int)
+    total_per_rank=defaultdict(int)    
+    for form, data in total_per_form.items():
+        if sum(data.values())>min_frequency:
+            print(form)
+        else:
+            continue
+        sorted_by_rank=sorted(data.items(), key=lambda x:x[1], reverse=True)
+        rank=1
+        for ranked_URI, freq in sorted_by_rank:
+            correct_per_rank[rank]+=correct_per_form[form][ranked_URI]
+            total_per_rank[rank]+=freq
+            rank+=1
+    return correct_per_rank, total_per_rank
+
+def plot_ranks(correct_per_rank, total_per_rank):
+    acc_per_rank=defaultdict(float)
+    for rank, total in total_per_rank.items():
+        acc_per_rank[rank]=correct_per_rank[rank]/total
+    print(acc_per_rank)
+    
+    plt.plot(list(acc_per_rank.keys()), list(acc_per_rank.values()), 'b-o')
+    plt.title("Accuracy per rank")
+    plt.xlabel("Rank")
+    plt.ylabel("Accuracy")
+    plt.show()
