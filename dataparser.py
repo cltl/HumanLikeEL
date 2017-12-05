@@ -1,4 +1,4 @@
-#!/usr/bin/python
+# -*- coding: utf-8 -*-
 # Filip Ilievski
 # December 2016
 
@@ -53,7 +53,7 @@ def load_article_from_nif_file(nif_file, limit=1000000, collection='wes2015'):
 
 
 def load_article_from_conll_file(conll_file):
-	lines=open(conll_file, 'r')
+	lines=open(conll_file, 'r', encoding='utf-8')
 	news_items=set()
 
 	current_file=''
@@ -85,7 +85,7 @@ def load_article_from_conll_file(conll_file):
 			content.append(word)
 			if len(elements)>3 and elements[1]=='B':
 				mention=elements[2]
-				gold=utils.getLinkRedirect(elements[3])
+				gold=utils.getLinkRedirect(elements[3].encode('utf-8').decode('unicode_escape'))
 #				if utils.computePR(gold)==0:
 #					gold=None
 				entity_obj = classes.EntityMention(

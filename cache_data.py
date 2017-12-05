@@ -6,10 +6,12 @@ path="to_cache/"
 redirectsFile="redirects_en.ttl"
 disambiguationFile="disambiguations_en.ttl"
 pagerankFile = "pagerank_en_2016-04.tsv" 
+nodesFile = "nodes.tsv"
 
 redirectsTest="testred.ttl"
 disambiguationTest="testdis.ttl"
 pagerankTest="testpr.tsv"
+nodesTest="testnod.tsv"
 
 rds=redis.Redis()
 
@@ -49,6 +51,23 @@ def cachePR():
 		v=round(float(o), 4)
 		rds.set(k,v)
 
-#vs=cachePR()
+def cacheNodesMapping():
+	lines=open(path + nodesFile, 'r')
+	for line in lines:
+		stuff=line.split()
+		num=stuff[0]
+		name=stuff[1]
+		if num!="node":
+			k='n:%s' % name
+			v=int(num)
+			#print(k,v)
+			rds.set(k,v)
 
-cacheDisambiguations()
+
+#cacheRedirects()
+
+cachePR()
+
+#cacheDisambiguations()
+
+#cacheNodesMapping()
