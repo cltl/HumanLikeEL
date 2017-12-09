@@ -39,13 +39,13 @@ def load_article_from_nif_file(nif_file, limit=1000000, collection='wes2015'):
 		qres_entities = g.query(query)
 		for entity in qres_entities:
 			gold_link=utils.getLinkRedirect(utils.normalizeURL(str(entity['gold'])))
-#			if utils.computePR(gold_link)==0:
-#				gold_link=None
+			page_rank=utils.computePR(gold_link)
 			entity_obj = classes.EntityMention(
 				begin_index=int(entity['start']),
 				end_index=int(entity['end']),
 				mention=str(entity['mention']),
-				gold_link=gold_link	
+				gold_link=gold_link,
+				gold_pr=page_rank
 			)
 			news_item_obj.entity_mentions.append(entity_obj)
 		news_items.add(news_item_obj)
@@ -86,13 +86,13 @@ def load_article_from_conll_file(conll_file):
 			if len(elements)>3 and elements[1]=='B':
 				mention=elements[2]
 				gold=utils.getLinkRedirect(elements[3].encode('utf-8').decode('unicode_escape'))
-#				if utils.computePR(gold)==0:
-#					gold=None
+				page_rank=utils.computePR(gold)
 				entity_obj = classes.EntityMention(
                          		begin_index=current_offset,
                                 	end_index=current_offset + len(mention),
                                 	mention=mention,
-                                	gold_link=gold
+                                	gold_link=gold,
+					gold_pr=page_rank
                         	)
 				news_item_obj.entity_mentions.append(entity_obj)
 			current_offset+=len(word)+1

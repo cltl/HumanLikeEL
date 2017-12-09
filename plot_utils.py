@@ -24,6 +24,22 @@ def get_mention_counts(articles, skip_nils=True):
 	cnt_forms=Counter(gold_forms)
 	return cnt_instances, cnt_forms
 
+def get_pagerank_distribution(articles, skip_zeros=False):
+
+	pagerank_frequency=defaultdict(int)
+
+	pr_uniq_sets=defaultdict(set)
+	for article in articles:
+		for mention in article.entity_mentions:
+			h=int(mention.gold_pr/1)
+			if not skip_zeros or h!=0:
+				pagerank_frequency[h]+=1
+				pr_uniq_sets[h].add(mention.gold_link)
+	pr_uniq=defaultdict(int)
+	for k,v in pr_uniq_sets.items():
+		pr_uniq[k]=len(v)
+	return pagerank_frequency, pr_uniq
+
 def get_interpretations_and_references(articles, skip_nils=True):
 	interpretations=defaultdict(set)
 	references = defaultdict(set)
@@ -74,7 +90,23 @@ def plot_freq_dist(cnt, title=None, x_axis='Entity mentions', loglog=False, b=2)
 			plt.title('Distribution of %s' % title)
 	plt.show()
 
-def frequency_correlation(freq_dist, other_dist, min_frequency=0):
+def plot_freq_noagg(data, title=None, x_axis='', loglog=False, b=2):
+        y = [data[i] for i in range(max(data.keys())+1)]
+        x_seq = list(np.arange(0, max(data.keys())+1, 1))
+        if loglog:
+                plt.loglog(x_seq, y, basex=b)
+        else:
+                plt.plot(x_seq, y)
+        plt.ylabel('Frequency')
+        plt.xlabel(x_axis)
+        if title:
+                if loglog:
+                        plt.title('Distribution of %s (log-log)' % title)
+                else:
+                        plt.title('Distribution of %s' % title)
+        plt.show()
+
+def frequency_correlation(freq_dist, other_dist, min_frequency=0, title=None, x_label='', y_label=''):
 
 	other_per_frequency = defaultdict(int)
 	count_per_frequency = defaultdict(int)
@@ -87,10 +119,14 @@ def frequency_correlation(freq_dist, other_dist, min_frequency=0):
 	x=[]
 	y=[]
 	for frequency in sorted(count_per_frequency):
-    		print(frequency, other_per_frequency[frequency]/count_per_frequency[frequency])
+#    		print(frequency, other_per_frequency[frequency]/count_per_frequency[frequency])
     		x.append(frequency)
     		y.append(other_per_frequency[frequency]/count_per_frequency[frequency])
 	plt.plot(x,y)
+	plt.ylabel(y_label)
+	plt.xlabel(x_label)
+	if title:
+		plt.title('Distribution of %s' % title)
 	plt.show()
 
 ################# SYSTEM UTILS #####################

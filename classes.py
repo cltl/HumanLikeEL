@@ -24,7 +24,7 @@ class EntityMention:
                  begin_index, end_index,
                  gold_link=None,
 		 the_type=None, sentence=None, sys_link=None, score=0.0, anchor_mention=None,
-		 total_pr=0.0, total_lotus=0.0, total_tp=0.0): #, exact_match=False):
+		 total_pr=0.0, total_lotus=0.0, total_tp=0.0, gold_pr=0.0): #, exact_match=False):
         self.sentence = sentence         # e.g. 4 -> which sentence is the entity mentioned in
         self.mention = mention           # e.g. "John Smith" -> the mention of an entity as found in text
         self.the_type = the_type         # e.g. "Person" | "http://dbpedia.org/ontology/Person"
@@ -34,6 +34,7 @@ class EntityMention:
         self.candidates = set()		 # candidates from LOTUS
         self.sys_link = sys_link	 # final system link
         self.anchor_mention = anchor_mention 	 # previous coreferential mentions of the same entity
+        self.gold_pr = gold_pr		 # pagerank of the gold instance
         self.total_pr = total_pr	 # total PageRank of all candidates
         self.total_lotus = total_lotus	 # total LOTUS score of all candidates
         self.total_tp = total_tp	 # total TP of all candidates
