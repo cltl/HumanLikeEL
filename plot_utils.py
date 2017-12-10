@@ -91,12 +91,14 @@ def plot_freq_dist(cnt, title=None, x_axis='Entity mentions', loglog=False, b=2)
 	plt.show()
 
 def plot_freq_noagg(data, title=None, x_axis='', loglog=False, b=2):
-        y = [data[i] for i in range(max(data.keys())+1)]
-        x_seq = list(np.arange(0, max(data.keys())+1, 1))
+
+        lists = sorted(data.items())
+        x, y = zip(*lists)
+
         if loglog:
-                plt.loglog(x_seq, y, basex=b)
+       	        plt.loglog(x, y, basex=b)
         else:
-                plt.plot(x_seq, y)
+                plt.plot(x, y)
         plt.ylabel('Frequency')
         plt.xlabel(x_axis)
         if title:
