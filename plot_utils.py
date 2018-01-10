@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 from scipy.stats import linregress
 from collections import defaultdict
+import random
+
 
 def calculate_slope(cnt):
 	y = OrderedDict(cnt.most_common())
@@ -64,6 +66,10 @@ def get_instance_distribution(articles, instance):
         return sorted(references.items(), key=lambda x: x[1], reverse=True)
 
 def get_form_distribution(articles, the_form):
+	instances = get_inst_with_counts(articles, the_form)
+	return sorted(instances.items(), key=lambda x: x[1], reverse=True)
+
+def get_inst_with_counts(articles, the_form):
         instances = defaultdict(int)
         for article in articles:
                 for mention in article.entity_mentions:
@@ -71,9 +77,44 @@ def get_form_distribution(articles, the_form):
                         meaning=mention.gold_link
                         if form==the_form and meaning!='--NME--':
                                 instances[meaning]+=1
-        return sorted(instances.items(), key=lambda x: x[1], reverse=True)
+        return instances
 
-def plot_freq_dist(cnt, title=None, x_axis='Entity mentions', loglog=False, b=2):
+def get_form_counts(articles, the_form):
+	instances = get_inst_with_counts(articles, the_form)
+	return instances.values()
+
+def prepare_scatter_plot(dist1, dist2):
+	x_dist = []
+	y_dist = []
+	for i, freq in dist1.items():
+		x_dist.append(freq)
+		y_dist.append(dist2[i])
+	x_dist=np.array(x_dist)
+	y_dist=np.array(y_dist)
+	return x_dist, y_dist
+
+def scatter_plot(dist1, dist2, x_axis='', y_axis='', title='', save=False):
+
+	fig, ax = plt.subplots()
+	fit = np.polyfit(dist1, dist2, deg=1)
+	ax.plot(dist1, fit[0] * dist1 + fit[1], color='red')
+	ax.scatter(dist1, dist2)
+
+	ax.set_xlabel(x_axis)
+	ax.set_ylabel(y_axis)
+	ax.set_title(title)
+
+	fig.show()
+
+	if save:
+		if title:
+			fig.savefig('img/%s.png' % title.lower().replace(' ', '_'), bbox_inches='tight')
+		else:
+			fig.savefig('img/%d.png' % random.randint(0,1000000), bbox_inches='tight')
+
+def plot_freq_dist(cnt, title=None, x_axis='Entity mentions', loglog=False, b=2, save=False):
+	fig = plt.figure()
+
 	y = OrderedDict(cnt.most_common())
 	v=list(y.values())
 	k=np.arange(0,len(v),1)
@@ -85,12 +126,19 @@ def plot_freq_dist(cnt, title=None, x_axis='Entity mentions', loglog=False, b=2)
 	plt.xlabel(x_axis)
 	if title:
 		if loglog:
-			plt.title('Distribution of %s (log-log)' % title)
+			p_title = 'Distribution of %s (log-log)' % title
 		else:
-			plt.title('Distribution of %s' % title)
+			p_title = 'Distribution of %s' % title
+		plt.title(p_title)
 	plt.show()
+	if save:
+		if title:		
+			fig.savefig('img/%s.png' % p_title.lower().replace(' ', '_'), bbox_inches='tight')
+		else:
+			fig.savefig('img/%d.png' % random.randint(0,1000000), bbox_inches='tight')	
 
-def plot_freq_noagg(data, title=None, x_axis='', loglog=False, b=2):
+def plot_freq_noagg(data, title=None, x_axis='', loglog=False, b=2, save=False):
+        fig = plt.figure()
 
         lists = sorted(data.items())
         x, y = zip(*lists)
@@ -103,12 +151,21 @@ def plot_freq_noagg(data, title=None, x_axis='', loglog=False, b=2):
         plt.xlabel(x_axis)
         if title:
                 if loglog:
-                        plt.title('Distribution of %s (log-log)' % title)
+                        p_title = 'Distribution of %s (log-log)' % title
                 else:
-                        plt.title('Distribution of %s' % title)
+                        p_title = 'Distribution of %s' % title
+                plt.title(p_title)
         plt.show()
+        if save:
+                if title:
+                        fig.savefig('img/%s.png' % p_title.lower().replace(' ', '_'), bbox_inches='tight')
+                else:
+                        fig.savefig('img/%d.png' % random.randint(0,1000000), bbox_inches='tight')
 
-def frequency_correlation(freq_dist, other_dist, min_frequency=0, title=None, x_label='', y_label=''):
+def frequency_correlation(freq_dist, other_dist, min_frequency=0, title=None, x_label='', y_label='', save=False):
+
+	fig = plt.figure()
+
 
 	other_per_frequency = defaultdict(int)
 	count_per_frequency = defaultdict(int)
@@ -128,8 +185,14 @@ def frequency_correlation(freq_dist, other_dist, min_frequency=0, title=None, x_
 	plt.ylabel(y_label)
 	plt.xlabel(x_label)
 	if title:
-		plt.title('Distribution of %s' % title)
+		plt.title(title)
 	plt.show()
+
+	if save:
+		if title:
+			fig.savefig('img/%s.png' % title.lower().replace(' ', '_'), bbox_inches='tight')
+		else:
+			fig.savefig('img/%d.png' % random.randint(0,1000000), bbox_inches='tight')
 
 ################# SYSTEM UTILS #####################
 
