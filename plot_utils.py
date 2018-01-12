@@ -1,10 +1,14 @@
 from collections import Counter, OrderedDict
 import matplotlib.pyplot as plt
+import matplotlib.cm as cm
 import numpy as np
 from scipy.stats import linregress
 from collections import defaultdict
 import random
-
+from sklearn.linear_model import Ridge
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.pipeline import make_pipeline
+from scipy.stats import pearsonr, spearmanr
 
 def calculate_slope(cnt):
 	y = OrderedDict(cnt.most_common())
@@ -83,6 +87,46 @@ def get_form_counts(articles, the_form):
 	instances = get_inst_with_counts(articles, the_form)
 	return instances.values()
 
+def compute_accuracy_by_form(articles, skip_nils=True):
+    forms_acc = defaultdict(int)
+    
+    correct_by_form = defaultdict(int)
+    total_by_form = defaultdict(int)
+
+    forms_by_count=defaultdict(set)
+    
+    for article in articles:
+        for entity in article.entity_mentions:
+            if entity.sys_link and (not skip_nils or entity.gold_link!='--NME--'):
+                if entity.sys_link==entity.gold_link:
+                    correct_by_form[entity.mention]+=1
+                total_by_form[entity.mention]+=1
+
+    for form, count in total_by_form.items():
+        forms_by_count[count].add(form)
+        forms_acc[form]=correct_by_form[form]*100.0/count
+    
+    return forms_acc, forms_by_count
+
+def compute_accuracy_by_uri(articles, skip_nils=True):
+	uris_acc = defaultdict(int)
+	correct_by_uri = defaultdict(int)
+	total_by_uri = defaultdict(int)
+
+	uris_by_count = defaultdict(set)
+
+	for article in articles:
+		for entity in article.entity_mentions:
+			if entity.sys_link and (not skip_nils or entity.gold_link!='--NME--'):
+				if entity.sys_link==entity.gold_link:
+					correct_by_uri[entity.gold_link]+=1
+				total_by_uri[entity.gold_link]+=1
+	for uri, count in total_by_uri.items():
+		uris_by_count[count].add(uri)
+		uris_acc[uri]=correct_by_uri[uri]*100.0/count
+
+	return uris_acc, uris_by_count
+
 def prepare_scatter_plot(dist1, dist2):
 	x_dist = []
 	y_dist = []
@@ -93,24 +137,84 @@ def prepare_scatter_plot(dist1, dist2):
 	y_dist=np.array(y_dist)
 	return x_dist, y_dist
 
-def scatter_plot(dist1, dist2, x_axis='', y_axis='', title='', save=False):
+def scatter_plot(dist1, dist2, x_axis='', y_axis='', title='', save=False, limit=100000, degree=1):
+	#colors = ['teal', 'yellowgreen', 'gold', 'red', 'blue']
+	lw=2
 
-	fig, ax = plt.subplots()
-	fit = np.polyfit(dist1, dist2, deg=1)
-	ax.plot(dist1, fit[0] * dist1 + fit[1], color='red')
-	ax.scatter(dist1, dist2)
+	#dist1=dist1[:limit]
+	#dist2=dist2[:limit]
 
-	ax.set_xlabel(x_axis)
-	ax.set_ylabel(y_axis)
-	ax.set_title(title)
+	fig = plt.figure()
 
-	fig.show()
+	plt.scatter(dist1, dist2, color='navy', marker='o', label="training points")
+	X = dist1[:, np.newaxis]
+	model = make_pipeline(PolynomialFeatures(degree), Ridge())
+	model.fit(X, dist2)
+	y_plot = model.predict(X)
+	plt.plot(dist1, y_plot, color='teal', linewidth=lw,
+	     label="Regression fit degree %d" % degree)
+
+	plt.xlabel(x_axis)
+	plt.ylabel(y_axis)
+	plt.title(title)
+
+	plt.legend(loc='upper right')
+
+	plt.show()
 
 	if save:
 		if title:
 			fig.savefig('img/%s.png' % title.lower().replace(' ', '_'), bbox_inches='tight')
 		else:
 			fig.savefig('img/%d.png' % random.randint(0,1000000), bbox_inches='tight')
+
+def plot_scores(scores, title=''):
+	dpoints = np.array(scores)
+
+	fig = plt.figure()
+	ax = fig.add_subplot(111)
+
+	space = 0.4
+
+	evals = np.unique(dpoints[:,0])
+	systems = np.unique(dpoints[:,1])
+
+	evals=['overall', 'ambiguous forms', 'forms with nils & non-nils' ]
+	print(evals)
+	print(systems)
+
+	n = len(evals)
+
+	width = (1 - space) / (len(evals))
+	print("width:", width)
+
+	indeces = range(1, len(systems)+1)
+
+	for i,cond in enumerate(evals):
+		print("evaluation:", cond)
+
+		vals = dpoints[dpoints[:,0] == cond][:,2].astype(np.float)
+		pos = [j - (1 - space) / 2. + i * width for j in range(1,len(systems)+1)]
+		ax.bar(pos, vals, width=width, label=cond, 
+			color=cm.Accent(float(i) / n))
+
+	    
+	ax.set_xticks(indeces)
+	ax.set_xticklabels(systems)
+	plt.setp(plt.xticks()[1], rotation=0)    
+
+	ax.set_ylabel("Accuracy")
+	ax.set_xlabel("Evaluation")
+
+	handles, labels = ax.get_legend_handles_labels()
+	ax.legend(handles[::1], labels[::1], loc='upper left')
+
+	plt.show()
+
+	if title:
+		fig.savefig('img/%s.png' % title.lower().replace(' ', '_'), bbox_inches='tight')
+	else:
+		fig.savefig('img/%d.png' % random.randint(0,1000000), bbox_inches='tight')
 
 def plot_freq_dist(cnt, title=None, x_axis='Entity mentions', loglog=False, b=2, save=False):
 	fig = plt.figure()
@@ -213,10 +317,10 @@ def prepare_ranks(correct_per_form, total_per_form, min_frequency=0):
     correct_per_rank=defaultdict(int)
     total_per_rank=defaultdict(int)    
     for form, data in total_per_form.items():
-        if sum(data.values())>min_frequency:
-            print(form)
-        else:
+        if sum(data.values())<=min_frequency:
             continue
+        elif min_frequency>0:
+            print(form)
         sorted_by_rank=sorted(data.items(), key=lambda x:x[1], reverse=True)
         rank=1
         for ranked_URI, freq in sorted_by_rank:
@@ -225,14 +329,31 @@ def prepare_ranks(correct_per_form, total_per_form, min_frequency=0):
             rank+=1
     return correct_per_rank, total_per_rank
 
-def plot_ranks(correct_per_rank, total_per_rank):
+def plot_ranks(correct_per_rank, total_per_rank, title='', save=False):
+
+    fig = plt.figure()
+
     acc_per_rank=defaultdict(float)
     for rank, total in total_per_rank.items():
         acc_per_rank[rank]=correct_per_rank[rank]/total
     print(acc_per_rank)
     
-    plt.plot(list(acc_per_rank.keys()), list(acc_per_rank.values()), 'b-o')
-    plt.title("Accuracy per rank")
+    dist1=list(acc_per_rank.keys())
+    dist2=list(acc_per_rank.values())
+
+    plt.plot(dist1, dist2, 'b-o')
+    plt.title(title)
     plt.xlabel("Rank")
     plt.ylabel("Accuracy")
     plt.show()
+
+    if save:
+        if title:
+            fig.savefig('img/%s.png' % title.lower().replace(' ', '_'), bbox_inches='tight')
+        else:
+            fig.savefig('img/%d.png' % random.randint(0,1000000), bbox_inches='tight')
+
+    correlation, significance = spearmanr(dist1, dist2)
+    print('The Spearman correlation between X and Y is:', correlation, '. Significance: ', significance)
+
+
