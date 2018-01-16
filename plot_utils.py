@@ -30,8 +30,9 @@ def get_mention_counts(articles, skip_nils=True):
 	cnt_forms=Counter(gold_forms)
 	return cnt_instances, cnt_forms
 
-def get_pagerank_distribution(articles, skip_zeros=False):
+def get_pageranks(articles, skip_zeros=False):
 
+	pageranks = {}
 	pagerank_frequency=defaultdict(int)
 
 	pr_uniq_sets=defaultdict(set)
@@ -41,10 +42,11 @@ def get_pagerank_distribution(articles, skip_zeros=False):
 			if not skip_zeros or h!=0:
 				pagerank_frequency[h]+=1
 				pr_uniq_sets[h].add(mention.gold_link)
+			pageranks[mention.gold_link]=h
 	pr_uniq=defaultdict(int)
 	for k,v in pr_uniq_sets.items():
 		pr_uniq[k]=len(v)
-	return pagerank_frequency, pr_uniq
+	return pagerank_frequency, pr_uniq, pageranks
 
 def get_interpretations_and_references(articles, skip_nils=True):
 	interpretations=defaultdict(set)
@@ -131,6 +133,8 @@ def prepare_scatter_plot(dist1, dist2):
 	x_dist = []
 	y_dist = []
 	for i, freq in dist1.items():
+		if i not in dist2:
+			continue
 		x_dist.append(freq)
 		y_dist.append(dist2[i])
 	x_dist=np.array(x_dist)
@@ -161,6 +165,39 @@ def scatter_plot(dist1, dist2, x_axis='', y_axis='', title='', save=False, limit
 	plt.legend(loc='upper right')
 
 	plt.show()
+
+	if save:
+		if title:
+			fig.savefig('img/%s.png' % title.lower().replace(' ', '_'), bbox_inches='tight')
+		else:
+			fig.savefig('img/%d.png' % random.randint(0,1000000), bbox_inches='tight')
+
+def prepare_box_plot(x,y):
+	i=0
+	agg_freq_per_amb = defaultdict(list)
+	while i<len(x):
+		amb=x[i]
+		freq=y[i]
+		agg_freq_per_amb[amb].append(freq)
+		#    print(amb,freq)
+		i+=1
+	bp_data = []
+	for amb in range(1, max(x)+1):
+		bp_data.append(agg_freq_per_amb[amb])
+	return bp_data
+
+def box_plot(dists, x_axis='', y_axis='', title='', y_lim=-1, save=False):
+	fig=plt.figure(1, figsize=(9, 6))
+
+	ax = fig.add_subplot(111)
+	
+	bp = ax.boxplot(dists)
+	ax.set_xlabel(x_axis)
+	ax.set_ylabel(y_axis)
+	ax.set_title(title)
+
+	if y_lim!=-1:
+		ax.set_ylim([0, y_lim])
 
 	if save:
 		if title:
@@ -274,10 +311,10 @@ def frequency_correlation(freq_dist, other_dist, min_frequency=0, title=None, x_
 	other_per_frequency = defaultdict(int)
 	count_per_frequency = defaultdict(int)
 	for form,frequency in freq_dist.items():
-    		if frequency>min_frequency:
-        		#print(form,frequency, ambiguity[form])
-        		count_per_frequency[frequency]+=1
-        		other_per_frequency[frequency]+=other_dist[form]
+		if frequency>min_frequency:
+			if form in other_dist:
+				count_per_frequency[frequency]+=1
+				other_per_frequency[frequency]+=other_dist[form]
 
 	x=[]
 	y=[]
@@ -285,7 +322,7 @@ def frequency_correlation(freq_dist, other_dist, min_frequency=0, title=None, x_
 #    		print(frequency, other_per_frequency[frequency]/count_per_frequency[frequency])
     		x.append(frequency)
     		y.append(other_per_frequency[frequency]/count_per_frequency[frequency])
-	plt.plot(x,y)
+	plt.plot(x,y, marker='o')
 	plt.ylabel(y_label)
 	plt.xlabel(x_label)
 	if title:
