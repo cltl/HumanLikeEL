@@ -337,13 +337,15 @@ def frequency_correlation(freq_dist, other_dist, min_frequency=0, title=None, x_
 
 ################# SYSTEM UTILS #####################
 
-def overall_performance(articles, skip_nils=True):
+def overall_performance(articles, skip_nils=True, skip_nonnils=False):
 	correct=0
 	total=0
 	for article in articles:
 		for entity in article.entity_mentions:
 			if skip_nils and entity.gold_link=='--NME--':
 		    		continue
+			if skip_nonnils and entity.gold_link!='--NME--':
+				continue
 			if entity.gold_link==entity.sys_link:
 		    		correct+=1
 			total+=1
