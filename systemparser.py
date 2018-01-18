@@ -7,9 +7,10 @@ from urllib.parse import urlencode
 spotlightUrl = 'http://spotlight.sztaki.hu:2222/rest/candidates?'
 headers = {'Accept': 'application/json'}
 
-agdistisUrl="http://139.18.2.164:8080/AGDISTIS"
+#agdistisUrl="http://139.18.2.164:8080/AGDISTIS"
+agdistisUrl = "http://akswnc9.informatik.uni-leipzig.de:8113/AGDISTIS"
 
-def disambiguate(xmlText, type='agdistis'):
+def disambiguateAgdistis(xmlText, type='agdistis'):
 	params={"text": xmlText, "type": type}
 	request = Request(agdistisUrl, urlencode(params).encode())
 	thisJson = urlopen(request).read().decode()

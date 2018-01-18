@@ -205,6 +205,17 @@ def box_plot(dists, x_axis='', y_axis='', title='', y_lim=-1, save=False):
 		else:
 			fig.savefig('img/%d.png' % random.randint(0,1000000), bbox_inches='tight')
 
+def autolabel(rects, ax):
+	"""
+	Attach a text label above each bar displaying its height
+	"""
+	for rect in rects:
+		height = rect.get_height()
+		print(height)
+		ax.text(rect.get_x() + rect.get_width()/2., 1.05*height,
+			round(height,2),
+			ha='center', va='bottom')
+
 def plot_scores(scores, title=''):
 	dpoints = np.array(scores)
 
@@ -232,9 +243,9 @@ def plot_scores(scores, title=''):
 
 		vals = dpoints[dpoints[:,0] == cond][:,2].astype(np.float)
 		pos = [j - (1 - space) / 2. + i * width for j in range(1,len(systems)+1)]
-		ax.bar(pos, vals, width=width, label=cond, 
+		br = ax.bar(pos, vals, width=width, label=cond, 
 			color=cm.Accent(float(i) / n))
-
+		autolabel(br, ax)
 	    
 	ax.set_xticks(indeces)
 	ax.set_xticklabels(systems)
@@ -336,6 +347,31 @@ def frequency_correlation(freq_dist, other_dist, min_frequency=0, title=None, x_
 			fig.savefig('img/%d.png' % random.randint(0,1000000), bbox_inches='tight')
 
 ################# SYSTEM UTILS #####################
+
+def overall_performance_prf(articles, skip_nils=True, skip_nonnils=False):
+	tp=0
+	fn=0
+	fp=0
+	for article in articles:
+		for entity in article.entity_mentions:
+			if skip_nils and entity.gold_link=='--NME--':
+		    		continue
+			if skip_nonnils and entity.gold_link!='--NME--':
+				continue
+			if entity.gold_link==entity.sys_link:
+		    		tp+=1
+			else: 
+				if entity.sys_link!='--NME--':
+					fp+=1
+				if entity.gold_link!='--NME--':
+					fn+=1
+	print(tp, fp, fn)
+	p=tp/(tp+fp)
+	r=tp/(tp+fn)
+	f1=2*p*r/(p+r)
+	print(p,r,f1)
+	return f1
+
 
 def overall_performance(articles, skip_nils=True, skip_nonnils=False):
 	correct=0
