@@ -2,6 +2,7 @@ from collections import Counter, OrderedDict
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import numpy as np
+from numpy import median
 from scipy.stats import linregress
 from collections import defaultdict
 import random
@@ -9,6 +10,8 @@ from sklearn.linear_model import Ridge
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import make_pipeline
 from scipy.stats import pearsonr, spearmanr
+import seaborn as sns
+import pandas as pd
 
 def calculate_slope(cnt):
 	y = OrderedDict(cnt.most_common())
@@ -162,8 +165,9 @@ def scatter_plot(dist1, dist2, x_axis='', y_axis='', title='', save=False, limit
 	plt.ylabel(y_axis)
 	plt.title(title)
 
-	plt.legend(loc='upper right')
-
+	legend = plt.legend(loc='upper right', frameon=1)
+	frame = legend.get_frame()
+	frame.set_edgecolor('gray')
 	plt.show()
 
 	if save:
@@ -171,6 +175,32 @@ def scatter_plot(dist1, dist2, x_axis='', y_axis='', title='', save=False, limit
 			fig.savefig('img/%s.png' % title.lower().replace(' ', '_'), bbox_inches='tight')
 		else:
 			fig.savefig('img/%d.png' % random.randint(0,1000000), bbox_inches='tight')
+
+def plot_line_with_whiskers(x, y, xl='', yl='', title='Correlation', estimators=['mean', 'median'], xlim=None, save=False):
+    for est in estimators:
+        fig = plt.figure()
+
+        amb_data = {xl: x, 
+                    yl: y}
+
+        df = pd.DataFrame(amb_data)
+
+        if est=='mean': # mean
+            ax = sns.pointplot(x=xl, y=yl, data=df)
+        else: # median
+            ax = sns.pointplot(x=xl, y=yl, data=df, estimator=median)
+
+        plt_title='%s (estimator=%s)' % (title, est)
+        plt.title(plt_title)
+
+        if xlim:
+                ax.set(xlim=(xlim[0], xlim[1]))
+        ax.set(ylim=(0, None))
+
+        plt.show()
+
+        if save:
+            fig.savefig('img/%s.png' % plt_title)
 
 def prepare_box_plot(x,y):
 	i=0
@@ -204,6 +234,46 @@ def box_plot(dists, x_axis='', y_axis='', title='', y_lim=-1, save=False):
 			fig.savefig('img/%s.png' % title.lower().replace(' ', '_'), bbox_inches='tight')
 		else:
 			fig.savefig('img/%d.png' % random.randint(0,1000000), bbox_inches='tight')
+
+def annotated_heatmap(x_labels, y_labels, values, x_lbl='levels'):
+
+    x=[]
+    y=[]
+    vals=[]
+    i=0
+    for x_val in x_labels:
+        for y_val in y_labels:
+            x.append(x_val)
+            y.append(y_val)
+            vals.append(values[i])
+            i+=1
+    print(x, y, vals)
+
+    data={}
+    data['dataset']=x
+    data[x_lbl]=y
+    data['values']=vals
+    
+    fig, ax = plt.subplots(figsize=(len(y_labels)+3,0.75*len(x_labels)))         # Sample figsize in inches
+    
+    df = pd.DataFrame.from_dict(data)
+    
+    result = df.pivot(index='dataset', columns=x_lbl, values='values')
+
+    print(result)
+    ax = sns.heatmap(data=result, annot=True, fmt="d", cmap='cubehelix', )
+    
+    fig.savefig('img/%s.png' % x_lbl)
+
+def autolabelh(rects, ax):
+    """
+    Attach a text label above each bar displaying its height
+    """
+    for rect in rects:
+        width = rect.get_width()
+        ax.text(1.05*width, rect.get_y() + rect.get_height()/2.,
+                int(width),
+               va='center')
 
 def autolabel(rects, ax):
 	"""
@@ -255,8 +325,9 @@ def plot_scores(scores, title=''):
 	ax.set_xlabel("Evaluation")
 
 	handles, labels = ax.get_legend_handles_labels()
-	ax.legend(handles[::1], labels[::1], loc='upper left')
-
+	legend = ax.legend(handles[::1], labels[::1], loc='upper left', frameon=1)
+	frame = legend.get_frame()
+	frame.set_edgecolor('gray')
 	plt.show()
 
 	if title:
@@ -314,7 +385,7 @@ def plot_freq_noagg(data, title=None, x_axis='', loglog=False, b=2, save=False):
                 else:
                         fig.savefig('img/%d.png' % random.randint(0,1000000), bbox_inches='tight')
 
-def frequency_correlation(freq_dist, other_dist, min_frequency=0, title=None, x_label='', y_label='', save=False):
+def frequency_correlation(freq_dist, other_dist, min_frequency=0, title=None, x_label='', y_label='', xlim=None, save=False):
 
 	fig = plt.figure()
 
@@ -336,6 +407,9 @@ def frequency_correlation(freq_dist, other_dist, min_frequency=0, title=None, x_
 	plt.plot(x,y, marker='o')
 	plt.ylabel(y_label)
 	plt.xlabel(x_label)
+	if xlim:
+		plt.xlim(xlim[0], xlim[1])
+	plt.ylim(ymin=0)
 	if title:
 		plt.title(title)
 	plt.show()

@@ -18,7 +18,7 @@ def load_article_from_nif_file(nif_file, limit=1000000, collection='wes2015'):
 	""" SELECT ?articleid ?date ?string
 	WHERE {
 		?articleid nif:isString ?string .
-		OPTIONAL { ?articleid dc:date ?date . }
+		OPTIONAL { ?articleid <http://purl.org/dc/elements/1.1/date> ?date . }
 	}
 	LIMIT %d""" % limit)
 	for article in articles:
@@ -39,6 +39,8 @@ def load_article_from_nif_file(nif_file, limit=1000000, collection='wes2015'):
 		qres_entities = g.query(query)
 		for entity in qres_entities:
 			gold_link=utils.getLinkRedirect(utils.normalizeURL(str(entity['gold'])))
+			if gold_link.startswith('http://aksw.org/notInWiki'):
+				gold_link='--NME--'
 			page_rank=utils.computePR(gold_link)
 			entity_obj = classes.EntityMention(
 				begin_index=int(entity['start']),
