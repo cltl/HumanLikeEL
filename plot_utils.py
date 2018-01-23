@@ -144,7 +144,7 @@ def prepare_scatter_plot(dist1, dist2):
 	y_dist=np.array(y_dist)
 	return x_dist, y_dist
 
-def scatter_plot(dist1, dist2, x_axis='', y_axis='', title='', save=False, limit=100000, degree=1):
+def scatter_plot(dist1, dist2, x_axis='', y_axis='', title='', save=False, limit=100000, degree=1, labels=None):
 	#colors = ['teal', 'yellowgreen', 'gold', 'red', 'blue']
 	lw=2
 
@@ -165,7 +165,16 @@ def scatter_plot(dist1, dist2, x_axis='', y_axis='', title='', save=False, limit
 	plt.ylabel(y_axis)
 	plt.title(title)
 
-	legend = plt.legend(loc='upper right', frameon=1)
+	if labels:
+		for i in range(0, len(dist2)):
+			xy=(dist1[i], dist2[i])
+			plt.annotate(labels[i], xy,
+				xytext=(-20, 20),
+				textcoords='offset points', ha='right', va='bottom',
+				bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.5),
+				arrowprops=dict(arrowstyle = '->', connectionstyle='arc3,rad=0'))
+
+	legend = plt.legend(loc='upper left', frameon=1)
 	frame = legend.get_frame()
 	frame.set_edgecolor('gray')
 	plt.show()
