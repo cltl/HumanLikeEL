@@ -15,8 +15,8 @@ import pandas as pd
 
 def calculate_slope(cnt):
 	y = OrderedDict(cnt.most_common())
-	v=list(y.values())
-	k=np.arange(0,len(v),1)
+	v=np.log(list(y.values()))
+	k=np.log(np.arange(1,len(v)+1,1))
 	return linregress(k,v)
 
 def get_mention_counts(articles, skip_nils=True):
@@ -292,21 +292,23 @@ def autolabel(rects, ax):
 		height = rect.get_height()
 		print(height)
 		ax.text(rect.get_x() + rect.get_width()/2., 1.05*height,
-			round(height,2),
+			round(height,2), fontsize=10,
 			ha='center', va='bottom')
 
 def plot_scores(scores, title=''):
 	dpoints = np.array(scores)
 
+	plt.gray()
 	fig = plt.figure()
 	ax = fig.add_subplot(111)
 
-	space = 0.4
+	space = 0.3
 
 	evals = np.unique(dpoints[:,0])
 	systems = np.unique(dpoints[:,1])
 
 	evals=['overall', 'ambiguous forms', 'forms with nils & non-nils' ]
+	colors=['#222222', '#666666', '#aaaaaa']
 	print(evals)
 	print(systems)
 
@@ -322,19 +324,18 @@ def plot_scores(scores, title=''):
 
 		vals = dpoints[dpoints[:,0] == cond][:,2].astype(np.float)
 		pos = [j - (1 - space) / 2. + i * width for j in range(1,len(systems)+1)]
-		br = ax.bar(pos, vals, width=width, label=cond, 
-			color=cm.Accent(float(i) / n))
+		br = ax.bar(pos, vals, width=width, label=cond, color=colors[i]) #cm.Accent(float(i) / n))
 		autolabel(br, ax)
 	    
 	ax.set_xticks(indeces)
 	ax.set_xticklabels(systems)
 	plt.setp(plt.xticks()[1], rotation=0)    
 
-	ax.set_ylabel("Accuracy")
-	ax.set_xlabel("Evaluation")
+	ax.set_ylim(ymax=1.1)
+	ax.set_ylabel("F1-score")
 
 	handles, labels = ax.get_legend_handles_labels()
-	legend = ax.legend(handles[::1], labels[::1], loc='upper left', frameon=1)
+	legend = ax.legend(handles[::1], labels[::1], loc='upper center', bbox_to_anchor=(0.22, 1.02),  shadow=True, ncol=1, frameon=1)
 	frame = legend.get_frame()
 	frame.set_edgecolor('gray')
 	plt.show()
