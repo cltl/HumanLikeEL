@@ -14,5 +14,5 @@ Apart from python dependencies, we use several more things needed to run this sy
   3. A running Redis instance where we cache: the wikilinks seen once, the LOTUS calls, and additional computationally heavy information.
   4. (optional) Stanford CoreNLP instance - we decided to turn off this for our experiments due to efficiency and accuracy considerations. If you need it, you can use our instance at corenlp.fii800.lod.labs.vu.nl
 
-##Contact
+## Contact
 For any considerations, suggestions, questions, or setup troubles, contact Filip Ilievski (f.ilievski@vu.nl).
